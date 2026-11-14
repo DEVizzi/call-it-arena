@@ -1,7 +1,7 @@
 # Call It Arena — Automated Posting & Format Schedule
-# GitHub Actions cron uses UTC:
-#   Slot A: 02:07 UTC = 07:37 IST (US evening prime time + India morning commute)
-#   Slot B: 14:07 UTC = 19:37 IST (India prime time + Europe afternoon)
+# GitHub Actions cron uses UTC (using :42 minute offset to bypass :00/:15/:30 runner queue congestion):
+#   Slot A: 02:42 UTC = 08:12 AM IST (Seeds right before 8:30 AM IST India morning scroll + 9:42 PM EST US prime night + SE Asia morning)
+#   Slot B: 13:42 UTC = 07:12 PM IST (Seeds right before 7:30-10:00 PM IST India #1 evening peak + EU/Africa afternoon + US/Brazil morning)
 
 brand:
   name: "Call It Arena"
@@ -11,16 +11,16 @@ brand:
 
 slots:
   A:
-    utc_cron: "7 2 * * *"
-    ist_time: "07:37 IST"
+    utc_cron: "42 2 * * *"
+    ist_time: "08:12 IST"
     mode: "rotating_guess"
-    description: "US evening prime time (~9 PM ET / 6 PM PT) + India morning commute"
+    description: "India morning commute (8:30-10 AM IST) + US prime night (9:42 PM EST / 6:42 PM PST) + Indonesia/Philippines morning"
   B:
-    utc_cron: "7 14 * * *"
-    ist_time: "19:37 IST"
+    utc_cron: "42 13 * * *"
+    ist_time: "19:12 IST"
     mode: "marble_league"
     sunday_override: "weekly_recap"
-    description: "India prime time + Europe afternoon (Country Marble League flagship)"
+    description: "India #1 evening prime time (7:30-10 PM IST) + Europe/UK/Nigeria afternoon + US/Brazil morning"
 
 # Overall target share across the week:
 # Slot B (7x/week) = Country Marble League (6 races + 1 Sunday Weekly Standings & Mega Quiz recap = 50% of posts)

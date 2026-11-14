@@ -2,10 +2,10 @@ name: Call It Arena — Daily Shorts & Reels Post
 
 on:
   schedule:
-    # Slot A: 02:07 UTC = 07:37 IST (US evening prime time + India morning commute) -> Rotating guess format (2-6)
-    - cron: "7 2 * * *"
-    # Slot B: 14:07 UTC = 19:37 IST (India prime time + Europe afternoon) -> Country Marble League flagship
-    - cron: "7 14 * * *"
+    # Slot A: 02:42 UTC = 08:12 AM IST (Hits 8:30-10:00 AM IST India morning commute + 9:42 PM EST / 6:42 PM PST US night peak + 9:42 AM Indonesia/PH)
+    - cron: "42 2 * * *"
+    # Slot B: 13:42 UTC = 07:12 PM IST (Seeds 15m before 7:30-10:00 PM IST India prime-time peak + 2:42 PM Europe/Nigeria + 8:42 AM EST US morning)
+    - cron: "42 13 * * *"
 
   workflow_dispatch:
     inputs:
