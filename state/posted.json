@@ -29,6 +29,13 @@
     "units_used": 1701,
     "daily_limit": 10000
   },
-  "playlist_ids": {},
+  "playlist_ids": {
+    "Marble League Season 1": "PLd1wxjRc7mEE",
+    "Guess The Flag Quiz": "PLP8mnh8N69K4",
+    "World Data Bar Race": "PLN1akFgolNC4",
+    "Deep Space Mystery (NASA)": "PLB0ZX28vTe9k",
+    "Algorithm Sorting Race": "PLaFUaxJewxis",
+    "Guess The Year History Quiz": "PLQaOHRk7lQi8"
+  },
   "weekly_analytics_history": []
 }
