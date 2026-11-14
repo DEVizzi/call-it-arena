@@ -18,12 +18,16 @@
   ],
   "retry_queue": [],
   "recent_title_patterns": [
-    "pattern_escape"
+    "pattern_escape",
+    "pattern_99fail"
   ],
   "used_seeds": [
-    "20261114-B"
+    "20261114-B",
+    "20261114-B-2"
   ],
-  "used_quiz_items": [],
+  "used_quiz_items": [
+    "flag_TR"
+  ],
   "youtube_quota": {
     "date": "2026-11-14",
     "units_used": 1701,
