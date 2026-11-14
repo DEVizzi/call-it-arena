@@ -352,9 +352,13 @@ def load_circular_flag_icon(code: str, diameter: int, border_color: Tuple[int, i
 def generate_channel_branding_assets() -> Tuple[Path, Path]:
     """
     Generates the official Call It Arena Profile Picture (800x800) and YouTube Banner (2560x1440)
-    in `/branding/` for the manual rebrand checklist.
+    in `/branding/` for the manual rebrand checklist (skips if already present on disk).
     """
     BRANDING_DIR.mkdir(parents=True, exist_ok=True)
+    pfp_path = BRANDING_DIR / "profile_picture.png"
+    banner_path = BRANDING_DIR / "youtube_banner.png"
+    if pfp_path.exists() and banner_path.exists():
+        return pfp_path, banner_path
 
     # 1. Profile Picture (800 x 800)
     pfp_size = 800
