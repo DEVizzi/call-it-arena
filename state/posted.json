@@ -1,0 +1,14 @@
+{
+  "posts": [],
+  "retry_queue": [],
+  "recent_title_patterns": [],
+  "used_seeds": [],
+  "used_quiz_items": [],
+  "youtube_quota": {
+    "date": "",
+    "units_used": 0,
+    "daily_limit": 10000
+  },
+  "playlist_ids": {},
+  "weekly_analytics_history": []
+}

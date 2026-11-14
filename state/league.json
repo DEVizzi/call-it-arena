@@ -1,0 +1,26 @@
+{
+  "season": 1,
+  "race_number": 0,
+  "max_races_per_season": 28,
+  "stage": "Group Stage",
+  "countries": {
+    "IN": {"code": "IN", "name": "India", "emoji": "🇮🇳", "points": 0, "wins": 0, "podiums": 0, "eliminated": false},
+    "US": {"code": "US", "name": "USA", "emoji": "🇺🇸", "points": 0, "wins": 0, "podiums": 0, "eliminated": false},
+    "BR": {"code": "BR", "name": "Brazil", "emoji": "🇧🇷", "points": 0, "wins": 0, "podiums": 0, "eliminated": false},
+    "ID": {"code": "ID", "name": "Indonesia", "emoji": "🇮🇩", "points": 0, "wins": 0, "podiums": 0, "eliminated": false},
+    "PH": {"code": "PH", "name": "Philippines", "emoji": "🇵🇭", "points": 0, "wins": 0, "podiums": 0, "eliminated": false},
+    "PK": {"code": "PK", "name": "Pakistan", "emoji": "🇵🇰", "points": 0, "wins": 0, "podiums": 0, "eliminated": false},
+    "BD": {"code": "BD", "name": "Bangladesh", "emoji": "🇧🇩", "points": 0, "wins": 0, "podiums": 0, "eliminated": false},
+    "NG": {"code": "NG", "name": "Nigeria", "emoji": "🇳🇬", "points": 0, "wins": 0, "podiums": 0, "eliminated": false},
+    "MX": {"code": "MX", "name": "Mexico", "emoji": "🇲🇽", "points": 0, "wins": 0, "podiums": 0, "eliminated": false},
+    "GB": {"code": "GB", "name": "UK", "emoji": "🇬🇧", "points": 0, "wins": 0, "podiums": 0, "eliminated": false},
+    "DE": {"code": "DE", "name": "Germany", "emoji": "🇩🇪", "points": 0, "wins": 0, "podiums": 0, "eliminated": false},
+    "JP": {"code": "JP", "name": "Japan", "emoji": "🇯🇵", "points": 0, "wins": 0, "podiums": 0, "eliminated": false},
+    "TR": {"code": "TR", "name": "Turkey", "emoji": "🇹🇷", "points": 0, "wins": 0, "podiums": 0, "eliminated": false},
+    "EG": {"code": "EG", "name": "Egypt", "emoji": "🇪🇬", "points": 0, "wins": 0, "podiums": 0, "eliminated": false},
+    "VN": {"code": "VN", "name": "Vietnam", "emoji": "🇻🇳", "points": 0, "wins": 0, "podiums": 0, "eliminated": false},
+    "CA": {"code": "CA", "name": "Canada", "emoji": "🇨🇦", "points": 0, "wins": 0, "podiums": 0, "eliminated": false}
+  },
+  "history": [],
+  "past_champions": []
+}

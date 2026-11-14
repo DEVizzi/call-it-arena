@@ -1,0 +1,29 @@
+# Virtual environments & caches
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.piper_cache/
+
+# Secrets & local env (NEVER commit)
+.env
+*.pem
+*.key
+*secret*.json
+token*.pickle
+token*.json
+
+# Generated media outputs & temporary files
+output/
+*.mp4
+*.wav
+*.mp3
+!assets/music/*.mp3
+!assets/music/*.wav
+!assets/sfx/*.wav
+!assets/sfx/*.mp3
+
+# OS files
+.DS_Store
+Thumbs.db

@@ -1,0 +1,45 @@
+# Call It Arena — Automated Posting & Format Schedule
+# GitHub Actions cron uses UTC:
+#   Slot A: 02:07 UTC = 07:37 IST (US evening prime time + India morning commute)
+#   Slot B: 14:07 UTC = 19:37 IST (India prime time + Europe afternoon)
+
+brand:
+  name: "Call It Arena"
+  handle: "@callitarena"
+  tagline: "Call it before the reveal. 👇"
+  youtube_category_id: "24"  # 24 = Entertainment, 20 = Gaming (configurable)
+
+slots:
+  A:
+    utc_cron: "7 2 * * *"
+    ist_time: "07:37 IST"
+    mode: "rotating_guess"
+    description: "US evening prime time (~9 PM ET / 6 PM PT) + India morning commute"
+  B:
+    utc_cron: "7 14 * * *"
+    ist_time: "19:37 IST"
+    mode: "marble_league"
+    sunday_override: "weekly_recap"
+    description: "India prime time + Europe afternoon (Country Marble League flagship)"
+
+# Overall target share across the week:
+# Slot B (7x/week) = Country Marble League (6 races + 1 Sunday Weekly Standings & Mega Quiz recap = 50% of posts)
+# Slot A (7x/week) = Rotating Formats 2-6 (~50% of posts), weighted below and auto-tuned by Sunday analytics loop.
+# Note: No single format is allowed to exceed max_format_share (0.70).
+max_format_share: 0.70
+
+format_weights:
+  marble_league: 0.50
+  flag_quiz: 0.10
+  data_guess: 0.10
+  space_guess: 0.10
+  sorting_race: 0.10
+  guess_the_year: 0.10
+
+playlists:
+  marble_league: "Marble League Season 1"
+  flag_quiz: "Guess The Flag Quiz"
+  data_guess: "World Data Bar Race"
+  space_guess: "Deep Space Mystery (NASA)"
+  sorting_race: "Algorithm Sorting Race"
+  guess_the_year: "Guess The Year History Quiz"

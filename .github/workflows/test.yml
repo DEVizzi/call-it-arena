@@ -1,0 +1,36 @@
+name: Call It Arena — CI Tests & Validation
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      SDL_VIDEODRIVER: "dummy"
+      SDL_AUDIODRIVER: "dummy"
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11 with pip cache
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: Install dependencies
+        run: |
+          which ffmpeg || (sudo apt-get update && sudo apt-get install -y ffmpeg)
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Run unit & validation test suite
+        run: |
+          pytest -v

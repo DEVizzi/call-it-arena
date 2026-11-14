@@ -1,0 +1,111 @@
+name: Call It Arena — Daily Shorts & Reels Post
+
+on:
+  schedule:
+    # Slot A: 02:07 UTC = 07:37 IST (US evening prime time + India morning commute) -> Rotating guess format (2-6)
+    - cron: "7 2 * * *"
+    # Slot B: 14:07 UTC = 19:37 IST (India prime time + Europe afternoon) -> Country Marble League flagship
+    - cron: "7 14 * * *"
+
+  workflow_dispatch:
+    inputs:
+      format:
+        description: "Video format to generate (or 'auto' for slot default)"
+        required: true
+        default: "auto"
+        type: choice
+        options:
+          - auto
+          - marble_league
+          - flag_quiz
+          - data_guess
+          - space_guess
+          - sorting_race
+          - guess_the_year
+      dry_run:
+        description: "Dry run (generate & validate MP4 artifact without live uploading)"
+        required: true
+        default: false
+        type: boolean
+
+permissions:
+  contents: write
+
+concurrency:
+  group: call-it-arena-post
+  cancel-in-progress: false
+
+jobs:
+  post:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      SDL_VIDEODRIVER: "dummy"
+      SDL_AUDIODRIVER: "dummy"
+      IG_ACCESS_TOKEN: ${{ secrets.IG_ACCESS_TOKEN }}
+      IG_USER_ID: ${{ secrets.IG_USER_ID }}
+      IG_BUSINESS_ACCOUNT_ID: ${{ secrets.IG_BUSINESS_ACCOUNT_ID }}
+      YT_CLIENT_ID: ${{ secrets.YT_CLIENT_ID }}
+      YT_CLIENT_SECRET: ${{ secrets.YT_CLIENT_SECRET }}
+      YT_REFRESH_TOKEN: ${{ secrets.YT_REFRESH_TOKEN }}
+      YOUTUBE_CLIENT_ID: ${{ secrets.YOUTUBE_CLIENT_ID }}
+      YOUTUBE_CLIENT_SECRET: ${{ secrets.YOUTUBE_CLIENT_SECRET }}
+      YOUTUBE_REFRESH_TOKEN: ${{ secrets.YOUTUBE_REFRESH_TOKEN }}
+      GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+      GOOGLE_API_KEY: ${{ secrets.GOOGLE_API_KEY }}
+      NASA_API_KEY: ${{ secrets.NASA_API_KEY }}
+      GH_TOKEN: ${{ github.token }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+
+      - name: Set up Python 3.11 with pip cache
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: Cache Piper TTS voice model (en_US-lessac-medium)
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/piper
+          key: piper-voice-en_US-lessac-medium-v1
+
+      - name: Install system & Python dependencies
+        run: |
+          which ffmpeg || (sudo apt-get update && sudo apt-get install -y ffmpeg)
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install piper-tts || true
+
+      - name: Generate, validate, and publish video
+        env:
+          INPUT_FORMAT: ${{ inputs.format || 'auto' }}
+          INPUT_DRY_RUN: ${{ inputs.dry_run || 'false' }}
+        run: |
+          python main.py \
+            --format "$INPUT_FORMAT" \
+            $( [ "$INPUT_DRY_RUN" = "true" ] && echo "--dry-run" || true )
+
+      - name: Upload generated MP4 as workflow artifact on dry run
+        if: ${{ inputs.dry_run == true }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: call-it-arena-dry-run-mp4
+          path: output/*.mp4
+          retention-days: 7
+
+      - name: Commit updated state & weekly analytics reports
+        if: always()
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add state/ reports/ schedule.yaml 2>/dev/null || true
+          if ! git diff --cached --quiet; then
+            git commit -m "chore: state update [skip ci]"
+            git pull --rebase -X theirs origin main
+            git push origin main
+          fi
