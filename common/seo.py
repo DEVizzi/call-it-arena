@@ -369,7 +369,7 @@ def _try_gemini_seo_enrichment(
         "You are a viral YouTube Shorts & Instagram Reels strategist for the channel 'Call It Arena' "
         "(tagline: 'Call it before the reveal. 👇').\n"
         f"Format: {format_name} | Main keyword: {kw} | Seed: {seed}\n"
-        f"Context JSON: {json.dumps(context, ensure_ascii=False)}\n"
+        f"Context JSON: {json.dumps(context, ensure_ascii=False, default=str)}\n"
         "Return ONLY valid JSON with keys:\n"
         "- 'titles': list of 5 curiosity-hook titles, each <= 68 chars, containing an emoji and the main keyword.\n"
         "- 'yt_hook_lines': 2-line engaging hook (do NOT reveal the winner).\n"
