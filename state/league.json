@@ -1,6 +1,6 @@
 {
   "season": 1,
-  "race_number": 1,
+  "race_number": 2,
   "max_races_per_season": 28,
   "stage": "Group Stage",
   "countries": {
@@ -17,7 +17,7 @@
       "code": "US",
       "name": "USA",
       "emoji": "🇺🇸",
-      "points": 0,
+      "points": 3,
       "wins": 0,
       "podiums": 0,
       "eliminated": false
@@ -62,9 +62,9 @@
       "code": "BD",
       "name": "Bangladesh",
       "emoji": "🇧🇩",
-      "points": 1,
-      "wins": 0,
-      "podiums": 0,
+      "points": 11,
+      "wins": 1,
+      "podiums": 1,
       "eliminated": false
     },
     "NG": {
@@ -80,7 +80,7 @@
       "code": "MX",
       "name": "Mexico",
       "emoji": "🇲🇽",
-      "points": 0,
+      "points": 1,
       "wins": 0,
       "podiums": 0,
       "eliminated": false
@@ -89,9 +89,9 @@
       "code": "GB",
       "name": "UK",
       "emoji": "🇬🇧",
-      "points": 0,
+      "points": 5,
       "wins": 0,
-      "podiums": 0,
+      "podiums": 1,
       "eliminated": false
     },
     "DE": {
@@ -125,9 +125,9 @@
       "code": "EG",
       "name": "Egypt",
       "emoji": "🇪🇬",
-      "points": 0,
+      "points": 7,
       "wins": 0,
-      "podiums": 0,
+      "podiums": 1,
       "eliminated": false
     },
     "VN": {
@@ -160,6 +160,19 @@
         "NG",
         "BR",
         "ID"
+      ],
+      "eliminated": null
+    },
+    {
+      "season": 1,
+      "race": 2,
+      "seed": "20261115-B",
+      "variant": "double_ring",
+      "winner": "BD",
+      "podium": [
+        "BD",
+        "EG",
+        "GB"
       ],
       "eliminated": null
     }

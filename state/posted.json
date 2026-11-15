@@ -29,25 +29,42 @@
       "instagram_media_id": "18226677133349214",
       "instagram_url": "https://www.instagram.com/reel/DfwgvM6gF5B/",
       "dry_run": false
+    },
+    {
+      "timestamp_utc": "2026-11-15T19:30:36.082938+00:00",
+      "slot": "B",
+      "format": "marble_league",
+      "seed": "20261115-B",
+      "winner": "🇧🇩 Bangladesh",
+      "duration_sec": 24.0,
+      "file_size_mb": 3.253,
+      "youtube_title": "Can India Escape First? 🇮🇳 Marble Race S1·R2",
+      "youtube_video_id": "410rWwdsLuU",
+      "youtube_url": "https://www.youtube.com/shorts/410rWwdsLuU",
+      "instagram_media_id": "17982557820132940",
+      "instagram_url": "https://www.instagram.com/reel/DfxiP31FKkx/",
+      "dry_run": false
     }
   ],
   "retry_queue": [],
   "recent_title_patterns": [
     "pattern_escape",
     "pattern_99fail",
-    "pattern_algo_win"
+    "pattern_algo_win",
+    "pattern_escape"
   ],
   "used_seeds": [
     "20261114-B",
     "20261114-B-2",
-    "20261115-A"
+    "20261115-A",
+    "20261115-B"
   ],
   "used_quiz_items": [
     "flag_TR"
   ],
   "youtube_quota": {
     "date": "2026-11-15",
-    "units_used": 1700,
+    "units_used": 3400,
     "daily_limit": 10000
   },
   "playlist_ids": {
@@ -58,5 +75,24 @@
     "Algorithm Sorting Race": "PLaFUaxJewxis",
     "Guess The Year History Quiz": "PLQaOHRk7lQi8"
   },
-  "weekly_analytics_history": []
+  "weekly_analytics_history": [
+    {
+      "date": "2026-11-15",
+      "channel_avg_views": 149.5,
+      "format_averages": {
+        "marble_league": {
+          "posts": 2,
+          "views": 186.0,
+          "likes": 3.0,
+          "comments": 2.5
+        },
+        "sorting_race": {
+          "posts": 1,
+          "views": 113.0,
+          "likes": 3.0,
+          "comments": 3.0
+        }
+      }
+    }
+  ]
 }

@@ -1,45 +1,34 @@
-# Call It Arena — Automated Posting & Format Schedule
-# GitHub Actions cron uses UTC (using :42 minute offset to bypass :00/:15/:30 runner queue congestion):
-#   Slot A: 02:42 UTC = 08:12 AM IST (Seeds right before 8:30 AM IST India morning scroll + 9:42 PM EST US prime night + SE Asia morning)
-#   Slot B: 13:42 UTC = 07:12 PM IST (Seeds right before 7:30-10:00 PM IST India #1 evening peak + EU/Africa afternoon + US/Brazil morning)
-
 brand:
-  name: "Call It Arena"
-  handle: "@callitarena"
-  tagline: "Call it before the reveal. 👇"
-  youtube_category_id: "24"  # 24 = Entertainment, 20 = Gaming (configurable)
-
+  name: Call It Arena
+  handle: '@callitarena'
+  tagline: Call it before the reveal. 👇
+  youtube_category_id: '24'
 slots:
   A:
-    utc_cron: "42 2 * * *"
-    ist_time: "08:12 IST"
-    mode: "rotating_guess"
-    description: "India morning commute (8:30-10 AM IST) + US prime night (9:42 PM EST / 6:42 PM PST) + Indonesia/Philippines morning"
+    utc_cron: 42 2 * * *
+    ist_time: 08:12 IST
+    mode: rotating_guess
+    description: India morning commute (8:30-10 AM IST) + US prime night (9:42 PM
+      EST / 6:42 PM PST) + Indonesia/Philippines morning
   B:
-    utc_cron: "42 13 * * *"
-    ist_time: "19:12 IST"
-    mode: "marble_league"
-    sunday_override: "weekly_recap"
-    description: "India #1 evening prime time (7:30-10 PM IST) + Europe/UK/Nigeria afternoon + US/Brazil morning"
-
-# Overall target share across the week:
-# Slot B (7x/week) = Country Marble League (6 races + 1 Sunday Weekly Standings & Mega Quiz recap = 50% of posts)
-# Slot A (7x/week) = Rotating Formats 2-6 (~50% of posts), weighted below and auto-tuned by Sunday analytics loop.
-# Note: No single format is allowed to exceed max_format_share (0.70).
-max_format_share: 0.70
-
+    utc_cron: 42 13 * * *
+    ist_time: 19:12 IST
+    mode: marble_league
+    sunday_override: weekly_recap
+    description: 'India #1 evening prime time (7:30-10 PM IST) + Europe/UK/Nigeria
+      afternoon + US/Brazil morning'
+max_format_share: 0.7
 format_weights:
-  marble_league: 0.50
-  flag_quiz: 0.10
-  data_guess: 0.10
-  space_guess: 0.10
-  sorting_race: 0.10
-  guess_the_year: 0.10
-
+  marble_league: 0.5
+  flag_quiz: 0.1
+  data_guess: 0.1
+  space_guess: 0.1
+  sorting_race: 0.1
+  guess_the_year: 0.1
 playlists:
-  marble_league: "Marble League Season 1"
-  flag_quiz: "Guess The Flag Quiz"
-  data_guess: "World Data Bar Race"
-  space_guess: "Deep Space Mystery (NASA)"
-  sorting_race: "Algorithm Sorting Race"
-  guess_the_year: "Guess The Year History Quiz"
+  marble_league: Marble League Season 1
+  flag_quiz: Guess The Flag Quiz
+  data_guess: World Data Bar Race
+  space_guess: Deep Space Mystery (NASA)
+  sorting_race: Algorithm Sorting Race
+  guess_the_year: Guess The Year History Quiz
