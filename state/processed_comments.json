@@ -1,5 +1,18 @@
 {
-  "processed_comment_ids": [],
-  "pending_wildcard": null,
-  "wildcard_history": []
+  "processed_comment_ids": [
+    "yt_UgwTzJLuwr4y8Oj8d2V4AaABAg",
+    "ig_17956817784288734"
+  ],
+  "pending_wildcard": {
+    "country_code": "IN",
+    "country_label": "🇮🇳 India",
+    "username": "@CallItArena"
+  },
+  "wildcard_history": [
+    {
+      "country_code": "IN",
+      "country_label": "🇮🇳 India",
+      "username": "@CallItArena"
+    }
+  ]
 }

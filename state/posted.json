@@ -14,23 +14,40 @@
       "instagram_media_id": "18110424869257683",
       "instagram_url": "https://www.instagram.com/reel/DfuybiSjZhb/",
       "dry_run": false
+    },
+    {
+      "timestamp_utc": "2026-11-15T09:58:03.640959+00:00",
+      "slot": "A",
+      "format": "sorting_race",
+      "seed": "20261115-A",
+      "winner": "QuickSort (251 ops)",
+      "duration_sec": 22.0,
+      "file_size_mb": 1.06,
+      "youtube_title": "Can QuickSort Beat MergeSort? 💻 Sorting Race",
+      "youtube_video_id": "IMCtuH68zX0",
+      "youtube_url": "https://www.youtube.com/shorts/IMCtuH68zX0",
+      "instagram_media_id": "18226677133349214",
+      "instagram_url": "https://www.instagram.com/reel/DfwgvM6gF5B/",
+      "dry_run": false
     }
   ],
   "retry_queue": [],
   "recent_title_patterns": [
     "pattern_escape",
-    "pattern_99fail"
+    "pattern_99fail",
+    "pattern_algo_win"
   ],
   "used_seeds": [
     "20261114-B",
-    "20261114-B-2"
+    "20261114-B-2",
+    "20261115-A"
   ],
   "used_quiz_items": [
     "flag_TR"
   ],
   "youtube_quota": {
-    "date": "2026-11-14",
-    "units_used": 1701,
+    "date": "2026-11-15",
+    "units_used": 1700,
     "daily_limit": 10000
   },
   "playlist_ids": {
