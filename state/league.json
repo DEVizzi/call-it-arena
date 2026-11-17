@@ -1,6 +1,6 @@
 {
   "season": 1,
-  "race_number": 5,
+  "race_number": 6,
   "max_races_per_season": 28,
   "stage": "Group Stage",
   "countries": {
@@ -17,18 +17,18 @@
       "code": "US",
       "name": "USA",
       "emoji": "🇺🇸",
-      "points": 3,
+      "points": 8,
       "wins": 0,
-      "podiums": 0,
+      "podiums": 1,
       "eliminated": false
     },
     "BR": {
       "code": "BR",
       "name": "Brazil",
       "emoji": "🇧🇷",
-      "points": 21,
-      "wins": 0,
-      "podiums": 3,
+      "points": 31,
+      "wins": 1,
+      "podiums": 4,
       "eliminated": false
     },
     "ID": {
@@ -62,9 +62,9 @@
       "code": "BD",
       "name": "Bangladesh",
       "emoji": "🇧🇩",
-      "points": 11,
+      "points": 18,
       "wins": 1,
-      "podiums": 1,
+      "podiums": 2,
       "eliminated": false
     },
     "NG": {
@@ -80,7 +80,7 @@
       "code": "MX",
       "name": "Mexico",
       "emoji": "🇲🇽",
-      "points": 1,
+      "points": 4,
       "wins": 0,
       "podiums": 0,
       "eliminated": false
@@ -98,7 +98,7 @@
       "code": "DE",
       "name": "Germany",
       "emoji": "🇩🇪",
-      "points": 4,
+      "points": 5,
       "wins": 0,
       "podiums": 0,
       "eliminated": false
@@ -212,6 +212,19 @@
         "TR",
         "PH",
         "NG"
+      ],
+      "eliminated": null
+    },
+    {
+      "season": 1,
+      "race": 6,
+      "seed": "20261117-B-2",
+      "variant": "spiral_labyrinth",
+      "winner": "BR",
+      "podium": [
+        "BR",
+        "BD",
+        "US"
       ],
       "eliminated": null
     }
