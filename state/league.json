@@ -1,6 +1,6 @@
 {
   "season": 1,
-  "race_number": 4,
+  "race_number": 5,
   "max_races_per_season": 28,
   "stage": "Group Stage",
   "countries": {
@@ -35,7 +35,7 @@
       "code": "ID",
       "name": "Indonesia",
       "emoji": "🇮🇩",
-      "points": 15,
+      "points": 18,
       "wins": 1,
       "podiums": 2,
       "eliminated": false
@@ -44,16 +44,16 @@
       "code": "PH",
       "name": "Philippines",
       "emoji": "🇵🇭",
-      "points": 0,
+      "points": 7,
       "wins": 0,
-      "podiums": 0,
+      "podiums": 1,
       "eliminated": false
     },
     "PK": {
       "code": "PK",
       "name": "Pakistan",
       "emoji": "🇵🇰",
-      "points": 0,
+      "points": 1,
       "wins": 0,
       "podiums": 0,
       "eliminated": false
@@ -71,9 +71,9 @@
       "code": "NG",
       "name": "Nigeria",
       "emoji": "🇳🇬",
-      "points": 15,
+      "points": 20,
       "wins": 1,
-      "podiums": 2,
+      "podiums": 3,
       "eliminated": false
     },
     "MX": {
@@ -116,9 +116,9 @@
       "code": "TR",
       "name": "Turkey",
       "emoji": "🇹🇷",
-      "points": 0,
-      "wins": 0,
-      "podiums": 0,
+      "points": 10,
+      "wins": 1,
+      "podiums": 1,
       "eliminated": false
     },
     "EG": {
@@ -198,6 +198,19 @@
       "podium": [
         "ID",
         "BR",
+        "NG"
+      ],
+      "eliminated": null
+    },
+    {
+      "season": 1,
+      "race": 5,
+      "seed": "20261117-B",
+      "variant": "single_ring",
+      "winner": "TR",
+      "podium": [
+        "TR",
+        "PH",
         "NG"
       ],
       "eliminated": null
