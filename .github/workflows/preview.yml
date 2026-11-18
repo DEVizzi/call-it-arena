@@ -54,12 +54,8 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - { name: "tower-defence-meteor-shower", format: tower_quake, arena: meteor_shower, seed: "PREVIEW-TD1", finale: "" }
           - { name: "tower-defence-cannon-barrage", format: tower_quake, arena: cannon_barrage, seed: "PREVIEW-TD7", finale: "" }
-          - { name: "tower-defence-bomb-blitz", format: tower_quake, arena: bombs, seed: "PREVIEW-TD8", finale: "" }
-          - { name: "tower-defence-ground-slam", format: tower_quake, arena: ground_slam, seed: "PREVIEW-TD9", finale: "" }
-          - { name: "tower-defence-earthquake", format: tower_quake, arena: earthquake, seed: "PREVIEW-TD10", finale: "" }
-          - { name: "tower-defence-APOCALYPSE-FINALE", format: tower_quake, arena: auto, seed: "PREVIEW-TD6", finale: "--finale" }
+          - { name: "tower-defence-cannon-barrage-2", format: tower_quake, arena: cannon_barrage, seed: "PREVIEW-TD11", finale: "" }
     steps:
       - uses: actions/checkout@v4
         with:

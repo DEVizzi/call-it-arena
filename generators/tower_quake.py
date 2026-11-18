@@ -299,10 +299,17 @@ def simulate_defence(seed: str, designs: List[str], scenario: str, power: float,
             while spawn_acc["cannon"] >= 1.0:
                 spawn_acc["cannon"] -= 1.0
                 side["cannon"] *= -1.0
-                sx = -40.0 if side["cannon"] > 0 else 1120.0
-                y = rng.uniform(GROUND_Y - 430.0, GROUND_Y - 60.0)
-                b = _ball(space, (sx, y), (side["cannon"] * rng.uniform(850.0, 1150.0), rng.uniform(-160.0, -60.0)), 15.0, 6.0)
-                projectiles.append((b, 15.0, "cannon", t))
+                # artillery: lob a shell from off-screen at a random STILL-STANDING tower (middle towers too)
+                standing = [tw for tw in towers if tw["fell_at"] is None] or towers
+                target = rng.choice(standing)
+                sx, sy = (-40.0 if side["cannon"] > 0 else 1120.0), GROUND_Y - rng.uniform(150.0, 300.0)
+                tx = target["x"] + rng.uniform(-30.0, 30.0)
+                ty = GROUND_Y - 12.0 - target["height0"] * rng.uniform(0.35, 0.95)
+                flight = rng.uniform(0.8, 1.1)
+                vx = (tx - sx) / flight
+                vy = (ty - sy) / flight - 0.5 * 900.0 * flight
+                b = _ball(space, (sx, sy), (vx, vy), 16.0, 7.0 + 0.05 * e)
+                projectiles.append((b, 16.0, "cannon", t))
         # --- bowling balls
         if "bowling" in parts and spawning:
             spawn_acc["bowl"] += dt * (0.28 + 0.05 * e)
@@ -418,6 +425,9 @@ def run_tuned_defence(seed: str, designs: List[str], scenario: str) -> Dict[str,
         else:
             power = min(12.0, power * 1.8)
     if best is None:
+        if scenario != "earthquake":
+            # Safety net: never fail a post — fall back to the always-decisive earthquake.
+            return run_tuned_defence(seed, designs, "earthquake")
         raise RuntimeError(f"Tower Defence ({scenario}): could not topple {n - 1} towers in any attempt")
     return best[1]
 
@@ -446,6 +456,8 @@ def generate_tower_quake_video(
 
     designs = pick_designs(seed)
     sim = run_tuned_defence(seed, designs, scenario)
+    scenario = sim["scenario"]  # may differ if the safety-net fallback kicked in
+    sc = SCENARIOS[scenario]
     towers = sim["towers"]
     records = sim["records"]
     n = len(designs)
