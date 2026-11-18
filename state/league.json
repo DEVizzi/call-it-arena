@@ -1,6 +1,6 @@
 {
   "season": 1,
-  "race_number": 6,
+  "race_number": 7,
   "max_races_per_season": 28,
   "stage": "Group Stage",
   "countries": {
@@ -44,9 +44,9 @@
       "code": "PH",
       "name": "Philippines",
       "emoji": "🇵🇭",
-      "points": 7,
+      "points": 14,
       "wins": 0,
-      "podiums": 1,
+      "podiums": 2,
       "eliminated": false
     },
     "PK": {
@@ -62,9 +62,9 @@
       "code": "BD",
       "name": "Bangladesh",
       "emoji": "🇧🇩",
-      "points": 18,
-      "wins": 1,
-      "podiums": 2,
+      "points": 28,
+      "wins": 2,
+      "podiums": 3,
       "eliminated": false
     },
     "NG": {
@@ -98,9 +98,9 @@
       "code": "DE",
       "name": "Germany",
       "emoji": "🇩🇪",
-      "points": 5,
+      "points": 10,
       "wins": 0,
-      "podiums": 0,
+      "podiums": 1,
       "eliminated": false
     },
     "JP": {
@@ -134,7 +134,7 @@
       "code": "VN",
       "name": "Vietnam",
       "emoji": "🇻🇳",
-      "points": 4,
+      "points": 5,
       "wins": 0,
       "podiums": 0,
       "eliminated": false
@@ -143,7 +143,7 @@
       "code": "CA",
       "name": "Canada",
       "emoji": "🇨🇦",
-      "points": 3,
+      "points": 6,
       "wins": 0,
       "podiums": 0,
       "eliminated": false
@@ -227,6 +227,36 @@
         "US"
       ],
       "eliminated": null
+    },
+    {
+      "season": 1,
+      "race": 7,
+      "seed": "20261118-B",
+      "variant": "plinko_drop",
+      "winner": "BD",
+      "podium": [
+        "BD",
+        "PH",
+        "DE"
+      ],
+      "eliminated": null,
+      "finish_order": [
+        "BD",
+        "PH",
+        "DE",
+        "CA",
+        "VN",
+        "EG",
+        "NG",
+        "ID",
+        "GB",
+        "IN",
+        "US",
+        "BR",
+        "JP",
+        "TR"
+      ],
+      "points_multiplier": 1
     }
   ],
   "past_champions": []
