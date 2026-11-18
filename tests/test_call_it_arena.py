@@ -111,8 +111,9 @@ def test_comment_country_extractor():
     assert extract_country_from_text_regex("Let's go Pinoy pride!") == "PH"
 
 
-def test_league_standings_sorting():
-    state = load_league_state()
+def test_league_standings_sorting(tmp_path):
+    # Use a fresh default season (never the live state/league.json, whose points change daily)
+    state = load_league_state(tmp_path / "fresh_league.json")
     state["countries"]["IN"]["points"] = 25
     state["countries"]["BR"]["points"] = 18
     standings = compute_standings(state)
