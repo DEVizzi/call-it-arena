@@ -119,6 +119,21 @@
       "instagram_media_id": "18060056408651430",
       "instagram_url": "https://www.instagram.com/reel/Df4UyUYHJ8x/",
       "dry_run": false
+    },
+    {
+      "timestamp_utc": "2026-11-18T21:39:39.035829+00:00",
+      "slot": "B",
+      "format": "marble_league",
+      "seed": "20261118-B-2",
+      "winner": "🇮🇳 India",
+      "duration_sec": 26.0,
+      "file_size_mb": 2.646,
+      "youtube_title": "Can India Escape First? 🇮🇳 Marble Race S1·R8",
+      "youtube_video_id": "rx0e9wUgPPc",
+      "youtube_url": "https://www.youtube.com/shorts/rx0e9wUgPPc",
+      "instagram_media_id": "18472876093189185",
+      "instagram_url": "https://www.instagram.com/reel/Df5fan5j0AY/",
+      "dry_run": false
     }
   ],
   "retry_queue": [],
@@ -131,7 +146,8 @@
     "pattern_escape",
     "pattern_vs",
     "pattern_escape",
-    "pattern_vs"
+    "pattern_vs",
+    "pattern_escape"
   ],
   "used_seeds": [
     "20261114-B",
@@ -142,14 +158,15 @@
     "20261116-B-2",
     "20261117-B",
     "20261117-B-2",
-    "20261118-B"
+    "20261118-B",
+    "20261118-B-2"
   ],
   "used_quiz_items": [
     "flag_TR"
   ],
   "youtube_quota": {
     "date": "2026-11-18",
-    "units_used": 1700,
+    "units_used": 3400,
     "daily_limit": 10000
   },
   "playlist_ids": {

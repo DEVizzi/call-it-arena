@@ -1,6 +1,6 @@
 {
   "season": 1,
-  "race_number": 7,
+  "race_number": 8,
   "max_races_per_season": 28,
   "stage": "Group Stage",
   "countries": {
@@ -8,9 +8,9 @@
       "code": "IN",
       "name": "India",
       "emoji": "🇮🇳",
-      "points": 10,
-      "wins": 1,
-      "podiums": 1,
+      "points": 20,
+      "wins": 2,
+      "podiums": 2,
       "eliminated": false
     },
     "US": {
@@ -26,7 +26,7 @@
       "code": "BR",
       "name": "Brazil",
       "emoji": "🇧🇷",
-      "points": 31,
+      "points": 32,
       "wins": 1,
       "podiums": 4,
       "eliminated": false
@@ -98,7 +98,7 @@
       "code": "DE",
       "name": "Germany",
       "emoji": "🇩🇪",
-      "points": 10,
+      "points": 13,
       "wins": 0,
       "podiums": 1,
       "eliminated": false
@@ -107,18 +107,18 @@
       "code": "JP",
       "name": "Japan",
       "emoji": "🇯🇵",
-      "points": 5,
+      "points": 12,
       "wins": 0,
-      "podiums": 1,
+      "podiums": 2,
       "eliminated": false
     },
     "TR": {
       "code": "TR",
       "name": "Turkey",
       "emoji": "🇹🇷",
-      "points": 10,
+      "points": 15,
       "wins": 1,
-      "podiums": 1,
+      "podiums": 2,
       "eliminated": false
     },
     "EG": {
@@ -255,6 +255,34 @@
         "BR",
         "JP",
         "TR"
+      ],
+      "points_multiplier": 1
+    },
+    {
+      "season": 1,
+      "race": 8,
+      "seed": "20261118-B-2",
+      "variant": "zigzag_ramps",
+      "winner": "IN",
+      "podium": [
+        "IN",
+        "JP",
+        "TR"
+      ],
+      "eliminated": null,
+      "finish_order": [
+        "IN",
+        "JP",
+        "TR",
+        "DE",
+        "BR",
+        "PH",
+        "US",
+        "MX",
+        "BD",
+        "ID",
+        "PK",
+        "CA"
       ],
       "points_multiplier": 1
     }
