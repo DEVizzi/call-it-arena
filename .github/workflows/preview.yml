@@ -54,13 +54,12 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - { name: "league-auto-next-arena", format: marble_league, arena: auto, seed: "20261118-B", finale: "" }
-          - { name: "league-GRAND-FINAL-mega-race", format: marble_league, arena: auto, seed: "PREVIEW-GF1", finale: "--finale" }
-          - { name: "league-windmill-drop", format: marble_league, arena: windmill_drop, seed: "PREVIEW-L6", finale: "" }
-          - { name: "derby-lanes-and-lineup", format: downhill_derby, arena: auto, seed: "PREVIEW-D2", finale: "" }
-          - { name: "derby-SERIES-FINALE", format: downhill_derby, arena: auto, seed: "PREVIEW-D3", finale: "--finale" }
-          - { name: "tower-quake-series", format: tower_quake, arena: auto, seed: "PREVIEW-T2", finale: "" }
-          - { name: "plinko-SERIES-FINALE", format: bucket_drop, arena: auto, seed: "PREVIEW-B2", finale: "--finale" }
+          - { name: "tower-defence-meteor-shower", format: tower_quake, arena: meteor_shower, seed: "PREVIEW-TD1", finale: "" }
+          - { name: "tower-defence-wrecking-ball", format: tower_quake, arena: wrecking_ball, seed: "PREVIEW-TD2", finale: "" }
+          - { name: "tower-defence-hurricane", format: tower_quake, arena: hurricane, seed: "PREVIEW-TD3", finale: "" }
+          - { name: "tower-defence-bowling", format: tower_quake, arena: bowling, seed: "PREVIEW-TD4", finale: "" }
+          - { name: "tower-defence-tilt", format: tower_quake, arena: tilt, seed: "PREVIEW-TD5", finale: "" }
+          - { name: "tower-defence-APOCALYPSE-FINALE", format: tower_quake, arena: auto, seed: "PREVIEW-TD6", finale: "--finale" }
     steps:
       - uses: actions/checkout@v4
         with:

@@ -43,7 +43,7 @@ FORMAT_MAIN_KEYWORDS: Dict[str, str] = {
     "sorting_race": "Sorting Race",
     "guess_the_year": "History Quiz",
     "bucket_drop": "Plinko",
-    "tower_quake": "Earthquake",
+    "tower_quake": "Tower Defence",
     "downhill_derby": "Car Race",
 }
 
@@ -55,7 +55,7 @@ FORMAT_YT_NICHE_HASHTAGS: Dict[str, Tuple[str, str]] = {
     "sorting_race": ("#sortingalgorithms", "#coding"),
     "guess_the_year": ("#historyquiz", "#guesstheyear"),
     "bucket_drop": ("#plinko", "#satisfying"),
-    "tower_quake": ("#earthquake", "#physics"),
+    "tower_quake": ("#towerdefence", "#physics"),
     "downhill_derby": ("#carrace", "#physicssimulation"),
 }
 
@@ -272,12 +272,13 @@ def build_title_candidates(
             ("pattern_bucket_lock", f"Lock Your Bucket Before It Lands! ⏳ {kw}"),
         ]
     elif format_name == "tower_quake":
+        disaster = str(context.get("scenario_label", "Earthquake"))
         raw = [
-            ("pattern_quake_which", f"Which Tower Survives The {kw}? 🏗️"),
-            ("pattern_quake_can", f"Can Any Tower Survive This {kw}? 😱"),
-            ("pattern_quake_only", f"Only One Tower Survives The {kw}! 🏆"),
-            ("pattern_quake_guess", f"Guess The Last Tower Standing! 🌋 {kw} Test"),
-            ("pattern_quake_wait", f"Wait For The Final Collapse! 💥 {kw} Test"),
+            ("pattern_quake_which", f"Which Tower Survives The {disaster}? 🏗️ {kw}"),
+            ("pattern_quake_can", f"Can Any Tower Survive This {disaster}? 😱 {kw}"),
+            ("pattern_quake_only", f"6 Towers, 1 Survivor! 🏆 {kw}"),
+            ("pattern_quake_guess", f"Guess The Last Tower Standing! 💥 {kw}"),
+            ("pattern_quake_wait", f"Wait For The Final Collapse! {disaster} {kw}"),
         ]
     elif format_name == "downhill_derby":
         cars_ctx = context.get("cars") or ["Monster Truck"]

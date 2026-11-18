@@ -1,14 +1,26 @@
 """
-Call It Arena — Format 8: Earthquake Tower Survival (`generators/tower_quake.py`).
+Call It Arena — Format 8: TOWER DEFENCE SEASON (`generators/tower_quake.py`, format id `tower_quake`).
 
-"Which tower stands last in the earthquake?"
-- Three Pymunk rigid-body block towers (picked from 6 designs: Column, Pillars, Staggered,
-  Twin Towers, Spire, Wide Base) stand on a kinematic ground plate.
-- The plate shakes horizontally with steadily rising magnitude (live Richter meter).
-- A tower "falls" once its highest point drops below 55% of its starting height.
-- The decisive moment (2nd tower falling) is time-remapped to land right after the reveal,
-  with the final seconds before it shown in slow motion during the 3-2-1 countdown.
-- Shake growth is auto-tuned per seed so the battle fills the timeline.
+"Six towers. One disaster. Which tower stands last?"
+- ALL 6 rigid-body tower designs compete in every game (Needle, Temple, Zigzag, Twin Towers, Spire,
+  Fortress), on shuffled positions, on one kinematic ground plate.
+- A 10-game season where every game is a DIFFERENT disaster, so every design gets scenarios to shine:
+    Earthquake (sideways shake)      → wide/low bases shine
+    Ground Slam (vertical pounding)  → interlocked/heavy stacks shine
+    Tilting Ground (seesaw plate)    → low centre of gravity shines
+    Meteor Shower (rain from above)  → slim targets shine (less roof to hit)
+    Wrecking Ball (descending sweep) → short towers shine (tall ones get hit first)
+    Hurricane (gusting wind)         → narrow, heavy towers shine (less surface)
+    Cannon Barrage (side fire)       → slim towers shine (smaller target)
+    Bowling Strike (balls along the ground) → pillars/arches shine (balls roll between legs)
+    Bomb Blitz (random blasts)       → spread-out designs shine
+  The 9 disasters are shuffled once per season (each happens exactly once), and GAME 10 is the
+  APOCALYPSE finale (earthquake + meteors + hurricane at once) worth 3x points.
+- Disasters escalate until only one tower stands; each collapse is marked "OUT #6 … #2" live.
+  The 5th collapse (the moment the last tower standing is decided) is time-remapped to land right
+  after the 3-2-1 reveal, and the disaster calms down afterwards so the champion stays upright.
+- Points per game by survival rank: 10 / 7 / 5 / 3 / 2 / 1 (finale x3) → season standings card after
+  every game, "TOWER DEFENCE CHAMPION" card after the finale. State: `state/series.json`.
 """
 
 import hashlib
@@ -43,33 +55,41 @@ from common.branding import (
 from common.physics_kit import TimeRemap, attach_impulse_sfx, rotate_point, sim_index
 from common.physics_video import produce_physics_video
 from common.render import draw_centered_text
-from common.series import draw_series_card, load_series_state, record_series_game, save_series_state
+from common.series import (
+    SERIES_LENGTH,
+    draw_series_card,
+    load_series_state,
+    next_game_info,
+    record_series_game,
+    save_series_state,
+)
 
+SERIES_KEY = "tower_quake"
 GROUND_Y = 1240.0
 FLOOR_Y = 1335.0
-PLATE_HALF = 470.0
-TOWER_X = [235.0, 540.0, 845.0]
-TOWER_LABELS = ["A", "B", "C"]
-TOWER_COLORS = [ACCENT_RED, ACCENT_BLUE, ACCENT_GREEN]
+PLATE_HALF = 530.0
+TOWER_SLOTS = [110.0, 282.0, 454.0, 626.0, 798.0, 970.0]
+TOWER_COLORS = [ACCENT_RED, ACCENT_BLUE, ACCENT_GREEN, ACCENT_YELLOW, (170, 92, 255), (0, 208, 222)]
 FALL_RATIO = 0.55
-BLOCK_SCALE = 1.3  # visual + physical scale of every tower design
+SURVIVAL_POINTS = [10, 7, 5, 3, 2, 1]  # rank 1 (last standing) → rank 6 (first to fall)
 SIM_HZ = 120
 
 TOTAL_DURATION = 24.0
-INTRO_SEC = 2.0
+INTRO_SEC = 3.5
 COUNTDOWN_START_SEC = 15.5
 REVEAL_START_SEC = 18.5
 OUTRO_START_SEC = 22.2
 TARGET_DECISIVE = (COUNTDOWN_START_SEC - INTRO_SEC) + 0.6 + 0.2 * (REVEAL_START_SEC - COUNTDOWN_START_SEC)
 
-Block = Tuple[float, float, float, float]  # (cx offset, bottom height above ground, width, height)
+Block = Tuple[float, float, float, float]  # (cx offset, bottom height above plate, width, height)
 
 
-def _design_column() -> List[Block]:
-    return [(0.0, i * 50.0, 80.0, 50.0) for i in range(8)]
+# ------------------------------------------------------------------------------------ towers
+def _needle() -> List[Block]:
+    return [(0.0, i * 50.0, 70.0, 50.0) for i in range(8)]
 
 
-def _design_pillars() -> List[Block]:
+def _temple() -> List[Block]:
     out: List[Block] = []
     for lvl in range(4):
         base = lvl * 100.0
@@ -77,68 +97,106 @@ def _design_pillars() -> List[Block]:
     return out
 
 
-def _design_staggered() -> List[Block]:
-    return [((15.0 if i % 2 else -15.0), i * 50.0, 100.0, 50.0) for i in range(8)]
+def _zigzag() -> List[Block]:
+    return [((14.0 if i % 2 else -14.0), i * 50.0, 90.0, 50.0) for i in range(8)]
 
 
-def _design_twin() -> List[Block]:
+def _twins() -> List[Block]:
     out: List[Block] = []
     for i in range(6):
-        out += [(-34.0, i * 62.0, 50.0, 62.0), (34.0, i * 62.0, 50.0, 62.0)]
-    out.append((0.0, 372.0, 140.0, 24.0))
+        out += [(-32.0, i * 62.0, 48.0, 62.0), (32.0, i * 62.0, 48.0, 62.0)]
+    out.append((0.0, 372.0, 118.0, 24.0))
     return out
 
 
-def _design_spire() -> List[Block]:
-    out: List[Block] = [(-62.0, 0.0, 60.0, 50.0), (0.0, 0.0, 60.0, 50.0), (62.0, 0.0, 60.0, 50.0),
-                        (-31.0, 50.0, 60.0, 50.0), (31.0, 50.0, 60.0, 50.0)]
-    out += [(0.0, 100.0 + i * 50.0, 52.0, 50.0) for i in range(6)]
+def _spire() -> List[Block]:
+    out: List[Block] = [(-48.0, 0.0, 46.0, 50.0), (0.0, 0.0, 46.0, 50.0), (48.0, 0.0, 46.0, 50.0),
+                        (-24.0, 50.0, 46.0, 50.0), (24.0, 50.0, 46.0, 50.0)]
+    out += [(0.0, 100.0 + i * 50.0, 44.0, 50.0) for i in range(6)]
     return out
 
 
-def _design_wide_base() -> List[Block]:
-    out: List[Block] = [(-76.0, 0.0, 150.0, 40.0), (76.0, 0.0, 150.0, 40.0)]
+def _fortress() -> List[Block]:
+    out: List[Block] = [(-37.0, 0.0, 72.0, 40.0), (37.0, 0.0, 72.0, 40.0)]
     out += [(0.0, 40.0 + i * 50.0, 90.0, 50.0) for i in range(5)]
     out += [(0.0, 290.0 + i * 40.0, 60.0, 40.0) for i in range(3)]
     return out
 
 
 TOWER_DESIGNS = {
-    "Column": _design_column,
-    "Pillars": _design_pillars,
-    "Staggered": _design_staggered,
-    "Twin Towers": _design_twin,
-    "Spire": _design_spire,
-    "Wide Base": _design_wide_base,
+    "Needle": _needle,
+    "Temple": _temple,
+    "Zigzag": _zigzag,
+    "Twin Towers": _twins,
+    "Spire": _spire,
+    "Fortress": _fortress,
 }
+DESIGN_NAMES = list(TOWER_DESIGNS.keys())
+DESIGN_COLORS = {name: TOWER_COLORS[i] for i, name in enumerate(DESIGN_NAMES)}
+
+# ------------------------------------------------------------------------------------ disasters
+SCENARIOS: Dict[str, Dict[str, str]] = {
+    "earthquake": {"label": "Earthquake", "meter": "MAGNITUDE", "spoken": "A massive earthquake hits!"},
+    "ground_slam": {"label": "Ground Slam", "meter": "SLAM FORCE", "spoken": "The ground starts slamming up and down!"},
+    "tilt": {"label": "Tilting Ground", "meter": "TILT ANGLE", "spoken": "The whole ground turns into a seesaw!"},
+    "meteor_shower": {"label": "Meteor Shower", "meter": "METEORS", "spoken": "Meteors are raining from the sky!"},
+    "wrecking_ball": {"label": "Wrecking Ball", "meter": "BALL DEPTH", "spoken": "A wrecking ball swings lower and lower!"},
+    "hurricane": {"label": "Hurricane", "meter": "WIND SPEED", "spoken": "A hurricane is coming!"},
+    "cannon_barrage": {"label": "Cannon Barrage", "meter": "FIRE RATE", "spoken": "Cannons open fire from both sides!"},
+    "bowling": {"label": "Bowling Strike", "meter": "BALL SPEED", "spoken": "Giant bowling balls roll in!"},
+    "bombs": {"label": "Bomb Blitz", "meter": "BLAST POWER", "spoken": "Bombs are going off everywhere!"},
+    "apocalypse": {"label": "APOCALYPSE", "meter": "CHAOS", "spoken": "The finale: earthquake, meteors and a hurricane at once!"},
+}
+REGULAR_SCENARIOS = [k for k in SCENARIOS if k != "apocalypse"]
+FINALE_SCENARIO = "apocalypse"
 
 
 def _seed_to_int(seed_str: str) -> int:
     return int(hashlib.sha256(seed_str.encode("utf-8")).hexdigest()[:12], 16)
 
 
+def scenario_for_game(series_season: int, game: int) -> str:
+    """Each regular disaster appears exactly once per 10-game season; game 10 is always the Apocalypse."""
+    if game >= SERIES_LENGTH:
+        return FINALE_SCENARIO
+    order = list(REGULAR_SCENARIOS)
+    random.Random(_seed_to_int(f"tower-defence-season-{series_season}")).shuffle(order)
+    return order[(game - 1) % len(order)]
+
+
 def pick_designs(seed: str) -> List[str]:
-    rng = random.Random(_seed_to_int(f"{seed}|designs"))
-    names = list(TOWER_DESIGNS.keys())
-    rng.shuffle(names)
-    return names[:3]
+    """All 6 designs, in a seeded shuffled slot order (left→right) so positions are fair across a season."""
+    names = list(DESIGN_NAMES)
+    random.Random(_seed_to_int(f"{seed}|slots")).shuffle(names)
+    return names
 
 
-def simulate_quake(seed: str, designs: List[str], growth: float, attempt: int) -> Dict[str, Any]:
-    rng = random.Random(_seed_to_int(f"{seed}|quake|{attempt}"))
+# ------------------------------------------------------------------------------------ simulation
+def _ball(space: pymunk.Space, pos, vel, r: float, mass: float, elasticity: float = 0.3) -> pymunk.Body:
+    body = pymunk.Body(mass, pymunk.moment_for_circle(mass, 0, r))
+    body.position = pos
+    body.velocity = vel
+    shape = pymunk.Circle(body, r)
+    shape.friction = 0.6
+    shape.elasticity = elasticity
+    shape.collision_type = 3
+    space.add(body, shape)
+    return body
+
+
+def simulate_defence(seed: str, designs: List[str], scenario: str, power: float, attempt: int,
+                     max_t: float = 46.0) -> Dict[str, Any]:
+    rng = random.Random(_seed_to_int(f"{seed}|defence|{scenario}|{attempt}"))
     space = pymunk.Space()
     space.gravity = (0.0, 900.0)
-    space.iterations = 30
+    space.iterations = 22
     space.damping = 0.999
 
-    floor = pymunk.Segment(space.static_body, (-400.0, FLOOR_Y), (1480.0, FLOOR_Y), 10.0)
+    floor = pymunk.Segment(space.static_body, (-600.0, FLOOR_Y), (1680.0, FLOOR_Y), 10.0)
     floor.friction = 0.9
     floor.elasticity = 0.1
     space.add(floor)
 
-    freq = rng.uniform(1.5, 2.1)
-    omega = 2.0 * math.pi * freq
-    max_amp = 70.0
     plate = pymunk.Body(body_type=pymunk.Body.KINEMATIC)
     plate.position = (540.0, GROUND_Y)
     plate_shape = pymunk.Segment(plate, (-PLATE_HALF, 0.0), (PLATE_HALF, 0.0), 12.0)
@@ -150,144 +208,301 @@ def simulate_quake(seed: str, designs: List[str], growth: float, attempt: int) -
     for ti, name in enumerate(designs):
         blocks = []
         top = 0.0
+        x0 = TOWER_SLOTS[ti]
         for (ox, base_h, w, h) in TOWER_DESIGNS[name]():
-            ox, base_h, w, h = (v * BLOCK_SCALE for v in (ox, base_h, w, h))
             mass = w * h / 900.0
             body = pymunk.Body(mass, pymunk.moment_for_box(mass, (w, h)))
-            body.position = (TOWER_X[ti] + ox + rng.uniform(-1.5, 1.5), GROUND_Y - 12.0 - base_h - h / 2.0)
+            body.position = (x0 + ox + rng.uniform(-1.0, 1.0), GROUND_Y - 12.0 - base_h - h / 2.0)
             shape = pymunk.Poly.create_box(body, (w, h), radius=0.5)
             shape.friction = 0.75
             shape.elasticity = 0.05
             shape.collision_type = 1
             space.add(body, shape)
-            blocks.append({"body": body, "w": w, "h": h})
+            blocks.append({"body": body, "w": w, "h": h, "area": w * h})
             top = max(top, base_h + h)
-        towers.append({"name": name, "blocks": blocks, "height0": top, "fell_at": None})
+        towers.append({"name": name, "x": x0, "blocks": blocks, "height0": top, "fell_at": None})
 
     sfx: List[SfxEvent] = []
     clock = {"t": 0.0}
-    attach_impulse_sfx(space, sfx, lambda: clock["t"], cutoff_sec=1e9, min_impulse=220.0, min_frame_gap=3)
+    attach_impulse_sfx(space, sfx, lambda: clock["t"], cutoff_sec=1e9, min_impulse=260.0, min_frame_gap=3)
 
-    shake_start = 0.8
+    parts = {"earthquake", "meteor_shower", "hurricane"} if scenario == FINALE_SCENARIO else {scenario}
+    combo = 0.75 if scenario == FINALE_SCENARIO else 1.0
+    q_omega = 2.0 * math.pi * rng.uniform(1.5, 2.1)
+    s_omega = 2.0 * math.pi * rng.uniform(2.4, 3.1)
+    t_omega = 2.0 * math.pi * rng.uniform(0.45, 0.7)
+    wb_omega = rng.uniform(1.4, 1.8)
+    wind_dir = rng.choice([-1.0, 1.0])
+    start = 0.8
+
+    wrecker: Optional[pymunk.Body] = None
+    if "wrecking_ball" in parts:
+        wrecker = pymunk.Body(body_type=pymunk.Body.KINEMATIC)
+        wrecker.position = (540.0, 640.0)
+        ws = pymunk.Circle(wrecker, 46.0)
+        ws.friction = 0.4
+        ws.elasticity = 0.2
+        space.add(wrecker, ws)
+
+    projectiles: List[Tuple[pymunk.Body, float, str]] = []
+    blasts: List[Tuple[float, float, float, float]] = []
+    spawn_acc = {"meteor": 0.0, "cannon": 0.0, "bowl": 0.0, "bomb": 0.0}
+    side = {"cannon": 1.0, "bowl": 1.0}
+
     dt = 1.0 / SIM_HZ
-    records: List[Dict[str, Any]] = []
     t = 0.0
-    max_t = 46.0
     falls: List[Tuple[float, int]] = []
-    peak_amp = 0.0
-    while t < max_t:
-        amp = min(max_amp, growth * max(0.0, t - shake_start))
-        if len(falls) >= 2:  # the quake subsides once the battle is decided
-            amp = peak_amp * max(0.0, 1.0 - (t - falls[1][0]) / 1.2)
-        else:
-            peak_amp = amp
-        records.append(
-            {
-                "plate_x": float(plate.position.x),
-                "amp": amp,
-                "blocks": [[(float(b["body"].position.x), float(b["body"].position.y), float(b["body"].angle))
-                            for b in tw["blocks"]] for tw in towers],
-            }
-        )
+    calm_at: Optional[float] = None
+    peak_level = 0.0
+    records: List[Dict[str, Any]] = []
+    cap_t = max_t
+
+    while t < cap_t:
+        e = power * max(0.0, t - start)  # escalation
+        calm = 1.0 if calm_at is None else max(0.0, 1.0 - (t - calm_at) / 1.2)
+        level = min(1.0, e / 30.0) * (calm if calm_at is not None else 1.0)
+        if calm_at is None:
+            peak_level = level
+
+        # --- plate motion (earthquake / ground slam / tilt)
+        vx = vy = av = 0.0
+        if "earthquake" in parts:
+            amp = min(90.0, 0.9 * e * combo) * calm
+            vx = amp * q_omega * math.cos(q_omega * t)
+        if "ground_slam" in parts:
+            amp = min(45.0, 0.35 * e) * calm
+            vy = amp * s_omega * math.cos(s_omega * t)
+        if "tilt" in parts:
+            amp = min(0.24, 0.006 * e) * calm
+            av = amp * t_omega * math.cos(t_omega * t)
+        plate.velocity = (vx, vy)
+        plate.angular_velocity = av
+        if calm_at is not None and calm <= 0.0:
+            plate.velocity = ((540.0 - plate.position.x) * 2.0, (GROUND_Y - plate.position.y) * 2.0)
+            plate.angular_velocity = -plate.angle * 2.0
+
+        spawning = calm_at is None
+        # --- meteors
+        if "meteor_shower" in parts and spawning:
+            spawn_acc["meteor"] += dt * (0.5 + 0.22 * e * combo)
+            while spawn_acc["meteor"] >= 1.0:
+                spawn_acc["meteor"] -= 1.0
+                r = rng.uniform(12.0, 25.0)
+                b = _ball(space, (rng.uniform(60.0, 1020.0), 300.0), (rng.uniform(-80.0, 80.0), rng.uniform(380.0, 650.0)),
+                          r, r * r / 55.0, 0.2)
+                projectiles.append((b, r, "meteor"))
+        # --- cannons
+        if "cannon_barrage" in parts and spawning:
+            spawn_acc["cannon"] += dt * (0.35 + 0.11 * e)
+            while spawn_acc["cannon"] >= 1.0:
+                spawn_acc["cannon"] -= 1.0
+                side["cannon"] *= -1.0
+                sx = -40.0 if side["cannon"] > 0 else 1120.0
+                y = rng.uniform(GROUND_Y - 430.0, GROUND_Y - 60.0)
+                b = _ball(space, (sx, y), (side["cannon"] * rng.uniform(850.0, 1150.0), rng.uniform(-160.0, -60.0)), 15.0, 6.0)
+                projectiles.append((b, 15.0, "cannon"))
+        # --- bowling balls
+        if "bowling" in parts and spawning:
+            spawn_acc["bowl"] += dt * (0.28 + 0.05 * e)
+            while spawn_acc["bowl"] >= 1.0:
+                spawn_acc["bowl"] -= 1.0
+                side["bowl"] *= -1.0
+                sx = -60.0 if side["bowl"] > 0 else 1140.0  # rolls in from off-screen onto the plate
+                b = _ball(space, (sx, plate.position.y - 12.0 - 40.0), (side["bowl"] * (420.0 + 22.0 * e), 0.0), 38.0, 22.0, 0.1)
+                projectiles.append((b, 38.0, "bowl"))
+        # --- bombs
+        if "bombs" in parts and spawning:
+            spawn_acc["bomb"] += dt / max(0.55, 2.2 - 0.07 * e)
+            while spawn_acc["bomb"] >= 1.0:
+                spawn_acc["bomb"] -= 1.0
+                standing = [tw for tw in towers if tw["fell_at"] is None] or towers
+                tw = rng.choice(standing)
+                bx = tw["x"] + rng.uniform(-70.0, 70.0)
+                by = GROUND_Y - rng.uniform(60.0, 360.0)
+                radius = 150.0
+                strength = 55.0 + 16.0 * e
+                for tw2 in towers:
+                    for blk in tw2["blocks"]:
+                        bd = blk["body"]
+                        dx, dy = bd.position.x - bx, bd.position.y - by
+                        d = math.hypot(dx, dy)
+                        if d < radius:
+                            fall = 1.0 - d / radius
+                            j = strength * bd.mass * fall
+                            bd.apply_impulse_at_world_point((dx / max(d, 1.0) * j, dy / max(d, 1.0) * j - 0.3 * j), bd.position)
+                blasts.append((t, bx, by, radius))
+                sfx.append(SfxEvent(timestamp_sec=t, kind="boing", gain=0.8, pitch_shift=0.55))
+        # --- hurricane wind
+        if "hurricane" in parts:
+            gust = (0.55 + 0.45 * abs(math.sin(0.9 * t))) * calm
+            for tw in towers:
+                base = plate.position.y - 12.0
+                for blk in tw["blocks"]:
+                    bd = blk["body"]
+                    hgt = max(0.0, base - bd.position.y)
+                    f = 0.85 * e * combo * gust * (blk["area"] / 900.0) * (1.0 + hgt / 280.0)
+                    bd.apply_force_at_world_point((wind_dir * f, 0.0), bd.position)
+        # --- wrecking ball (descending sweep)
+        if wrecker is not None:
+            if calm_at is None:
+                lower = GROUND_Y - 70.0
+                wy = wrecker.position.y
+                vy_w = 9.0 * power if (t > start and wy < lower) else 0.0
+                wrecker.velocity = (560.0 * wb_omega * math.cos(wb_omega * t), vy_w)
+            else:
+                wrecker.velocity = (0.0, -500.0)
+
+        records.append({
+            "plate": (float(plate.position.x), float(plate.position.y), float(plate.angle)),
+            "blocks": [[(float(b["body"].position.x), float(b["body"].position.y), float(b["body"].angle))
+                        for b in tw["blocks"]] for tw in towers],
+            "proj": [(float(b.position.x), float(b.position.y), r, kind) for b, r, kind in projectiles],
+            "wreck": (float(wrecker.position.x), float(wrecker.position.y)) if wrecker is not None else None,
+            "level": level,
+        })
         clock["t"] = t
-        # velocity of x(t) = amp(t)·sin(ωt) (amp grows slowly → derivative dominated by ω term)
-        plate.velocity = (amp * omega * math.cos(omega * t), 0.0)
         space.step(dt)
         t += dt
+
+        # projectile cleanup
+        keep = []
+        for b, r, kind in projectiles:
+            if b.position.y > FLOOR_Y + 220 or not (-400.0 < b.position.x < 1480.0):
+                space.remove(b, *b.shapes)
+            else:
+                keep.append((b, r, kind))
+        projectiles = keep
+
+        # collapse detection (height relative to the local plate surface under each tower)
+        px, py, pa = plate.position.x, plate.position.y, plate.angle
         for ti, tw in enumerate(towers):
             if tw["fell_at"] is not None:
                 continue
+            local_base = py + (tw["x"] - px) * math.tan(pa) - 12.0
             highest = min(b["body"].position.y - b["h"] / 2.0 for b in tw["blocks"])
-            height_now = GROUND_Y - 12.0 - highest
-            if height_now < FALL_RATIO * tw["height0"]:
+            if local_base - highest < FALL_RATIO * tw["height0"]:
                 tw["fell_at"] = t
                 falls.append((t, ti))
-                sfx.append(SfxEvent(timestamp_sec=t, kind="reveal_fanfare", gain=0.35, pitch_shift=0.6))
-                if len(falls) == 2:
-                    max_t = t + 6.0
-    return {"towers": towers, "records": records, "falls": falls, "sfx": sfx, "growth": growth, "freq": freq,
-            "peak_amp": peak_amp}
+                sfx.append(SfxEvent(timestamp_sec=t, kind="reveal_fanfare", gain=0.3, pitch_shift=0.55))
+                if len(falls) == len(towers) - 1 and calm_at is None:
+                    calm_at = t
+                    cap_t = t + 6.0
+
+    return {"towers": towers, "records": records, "falls": falls, "sfx": sfx, "power": power,
+            "blasts": blasts, "peak_level": peak_level, "scenario": scenario}
 
 
-def run_tuned_quake(seed: str, designs: List[str]) -> Dict[str, Any]:
-    growth = 4.2
+def run_tuned_defence(seed: str, designs: List[str], scenario: str) -> Dict[str, Any]:
+    power = 1.0
     best: Optional[Tuple[float, Dict[str, Any]]] = None
-    for attempt in range(16):
-        sim = simulate_quake(seed, designs, growth, attempt)
-        if len(sim["falls"]) >= 2:
-            t2 = sim["falls"][1][0]
-            err = abs(t2 - TARGET_DECISIVE) / TARGET_DECISIVE
-            # the survivor must still be standing for the rest of the video (~5s after the decisive fall)
-            if len(sim["falls"]) >= 3 and sim["falls"][2][0] < t2 + 5.2:
-                err += 1.0
+    n = len(designs)
+    for attempt in range(10):
+        sim = simulate_defence(seed, designs, scenario, power, attempt)
+        falls = sim["falls"]
+        if len(falls) >= n - 1:
+            t_dec = falls[n - 2][0]
+            err = abs(t_dec - TARGET_DECISIVE) / TARGET_DECISIVE
+            first = falls[0][0]
+            if first < 2.0:
+                err += 0.3  # someone collapsing instantly is boring
+            if len(falls) >= n and falls[n - 1][0] < t_dec + 5.2:
+                err += 1.0  # champion must still be standing through the reveal
             if best is None or err < best[0]:
                 best = (err, sim)
             if err < 0.12:
                 break
-            growth = max(0.6, min(30.0, growth * (t2 / TARGET_DECISIVE) ** 1.3))
+            power = max(0.15, min(12.0, power * (t_dec / TARGET_DECISIVE) ** 1.3))
         else:
-            growth = min(30.0, growth * 1.8)
+            power = min(12.0, power * 1.8)
     if best is None:
-        raise RuntimeError("Tower quake: fewer than two towers fell in every attempt")
+        raise RuntimeError(f"Tower Defence ({scenario}): could not topple {n - 1} towers in any attempt")
     return best[1]
 
 
+# Backwards-compatible name used by older callers/tests
+def run_tuned_quake(seed: str, designs: List[str], scenario: str = "earthquake") -> Dict[str, Any]:
+    return run_tuned_defence(seed, designs, scenario)
+
+
+# ------------------------------------------------------------------------------------ video
 def generate_tower_quake_video(
     seed: str,
     output_dir: Path = OUTPUT_DIR,
     wildcard: Optional[Dict[str, str]] = None,
     update_state: bool = True,
     force_game: Optional[int] = None,
+    scenario_override: Optional[str] = None,
 ) -> Dict[str, Any]:
-    designs = pick_designs(seed)
-    sim = run_tuned_quake(seed, designs)
-    towers = sim["towers"]
-    records = sim["records"]
-    t_decisive = sim["falls"][1][0]
-    fallen = {ti for _, ti in sim["falls"][:2]}
-    winner_idx = [i for i in range(3) if i not in fallen][0]
-    winner_label = f"Tower {TOWER_LABELS[winner_idx]} ({towers[winner_idx]['name']})"
-    remap = TimeRemap(t_decisive, INTRO_SEC, COUNTDOWN_START_SEC, REVEAL_START_SEC, slowmo=0.2, post=0.6)
-    fall_video_t = {ti: remap.inverse(ft) for ft, ti in sim["falls"]}
-
-    # 10-quake series: which tower DESIGN stands last most often (finale win counts 3x)
     if force_game and update_state:
         raise ValueError("force_game is a preview mode and requires update_state=False")
     series_state = load_series_state()
+    series_season, game_no, is_finale, _mult = next_game_info(series_state, SERIES_KEY, force_game)
+    scenario = scenario_override if scenario_override in SCENARIOS else scenario_for_game(series_season, game_no)
+    sc = SCENARIOS[scenario]
+    next_scenario = None if is_finale else scenario_for_game(series_season, game_no + 1)
+
+    designs = pick_designs(seed)
+    sim = run_tuned_defence(seed, designs, scenario)
+    towers = sim["towers"]
+    records = sim["records"]
+    n = len(designs)
+    falls = sim["falls"]
+    t_decisive = falls[n - 2][0]
+    fallen_first_n = [ti for _, ti in falls[: n - 1]]
+    winner_idx = [i for i in range(n) if i not in fallen_first_n][0]
+    survival_order = [winner_idx] + list(reversed(fallen_first_n))  # rank 1..6
+    out_rank = {ti: n - k for k, ti in enumerate(fallen_first_n)}  # first to fall = #6
     winner_design = towers[winner_idx]["name"]
-    series = record_series_game(series_state, "tower_quake", {winner_design: 1}, winner_design, seed,
-                                all_keys=list(TOWER_DESIGNS.keys()), force_game=force_game)
-    if update_state:
-        save_series_state(series_state)
-    palette = [ACCENT_RED, ACCENT_BLUE, ACCENT_GREEN, ACCENT_YELLOW, (170, 92, 255), (0, 208, 222)]
-    series_colors = {name: palette[i % len(palette)] for i, name in enumerate(TOWER_DESIGNS.keys())}
-    series_labels = {name: name for name in TOWER_DESIGNS.keys()}
+
+    remap = TimeRemap(t_decisive, INTRO_SEC, COUNTDOWN_START_SEC, REVEAL_START_SEC, slowmo=0.2, post=0.6)
+    fall_video_t = {ti: remap.inverse(ft) for ft, ti in falls}
     card_from = remap.inverse(t_decisive) + 1.6
 
+    awards = {towers[ti]["name"]: SURVIVAL_POINTS[rank] for rank, ti in enumerate(survival_order)}
+    series = record_series_game(series_state, SERIES_KEY, awards, winner_design, seed, all_keys=DESIGN_NAMES,
+                                force_game=force_game)
+    if update_state:
+        save_series_state(series_state)
+
     sfx = [SfxEvent(remap.inverse(e.timestamp_sec), e.kind, e.gain, e.pitch_shift) for e in sim["sfx"]]
+    blasts = sim["blasts"]
 
     base = Image.new("RGB", (VIDEO_WIDTH, VIDEO_HEIGHT), BG_COLOR)
     bd = ImageDraw.Draw(base)
     for y in range(420, int(GROUND_Y), 80):
-        bd.line([(60, y), (VIDEO_WIDTH - 60, y)], fill=(20, 23, 40), width=1)
-    bd.rectangle([0, FLOOR_Y, VIDEO_WIDTH, FLOOR_Y + 40], fill=(38, 34, 30))
+        bd.line([(30, y), (VIDEO_WIDTH - 30, y)], fill=(20, 23, 40), width=1)
+    bd.rectangle([0, FLOOR_Y, VIDEO_WIDTH, FLOOR_Y + 48], fill=(38, 34, 30))
     bd.line([(0, FLOOR_Y), (VIDEO_WIDTH, FLOOR_Y)], fill=(90, 80, 70), width=4)
 
     def draw_frame(t_sec: float) -> Image.Image:
-        rec = records[sim_index(remap(t_sec), SIM_HZ, len(records))]
+        st = remap(t_sec)
+        rec = records[sim_index(st, SIM_HZ, len(records))]
         frame = base.copy()
         draw = ImageDraw.Draw(frame)
-        px = rec["plate_x"]
-        # ground plate with hazard stripes
-        draw.rectangle([px - PLATE_HALF, GROUND_Y - 12, px + PLATE_HALF, GROUND_Y + 12], fill=(70, 74, 96))
-        for sx in range(int(px - PLATE_HALF), int(px + PLATE_HALF), 40):
-            draw.polygon([(sx, GROUND_Y + 12), (sx + 20, GROUND_Y + 12), (sx + 32, GROUND_Y - 12), (sx + 12, GROUND_Y - 12)],
-                         fill=(247, 144, 9))
-        revealed = t_sec >= REVEAL_START_SEC + 0.9
+
+        # hurricane streaks
+        if scenario in ("hurricane", "apocalypse") and rec["level"] > 0.02:
+            n_streaks = int(10 + 50 * rec["level"])
+            for k in range(n_streaks):
+                yy = 420 + (k * 97) % 820
+                xx = (k * 233 + st * (500 + 900 * rec["level"])) % 1300 - 110
+                draw.line([(xx, yy), (xx + 60 + 80 * rec["level"], yy)], fill=(70, 90, 130), width=2)
+
+        # plate
+        px, py, pa = rec["plate"]
+        c, s_ = math.cos(pa), math.sin(pa)
+        p1 = (px - PLATE_HALF * c, py - PLATE_HALF * s_)
+        p2 = (px + PLATE_HALF * c, py + PLATE_HALF * s_)
+        draw.line([p1, p2], fill=(70, 74, 96), width=24)
+        for k in range(0, int(2 * PLATE_HALF), 44):
+            qx, qy = p1[0] + c * k, p1[1] + s_ * k
+            draw.line([(qx, qy + 10), (qx + 18 * c, qy + 18 * s_ - 10)], fill=(247, 144, 9), width=6)
+
+        # towers
         for ti, tw in enumerate(towers):
-            col = TOWER_COLORS[ti]
+            col = DESIGN_COLORS[tw["name"]]
             down = ti in fall_video_t and t_sec >= fall_video_t[ti]
-            fill = tuple(int(c * 0.45) for c in col) if down else col
+            fill = tuple(int(v * 0.42) for v in col) if down else col
             for (bx, by, ba), blk in zip(rec["blocks"][ti], tw["blocks"]):
                 hw, hh = blk["w"] / 2.0, blk["h"] / 2.0
                 pts = []
@@ -295,38 +510,72 @@ def generate_tower_quake_video(
                     rx, ry = rotate_point((lx, ly), ba)
                     pts.append((bx + rx, by + ry))
                 draw.polygon(pts, fill=fill, outline=TEXT_WHITE)
-            # tower label badge
-            lx = TOWER_X[ti]
-            badge_col = ACCENT_GREEN if (revealed and ti == winner_idx) else (PANEL_BG_COLOR if not down else (60, 30, 40))
-            draw.rounded_rectangle([lx - 90, 1350, lx + 90, 1378], radius=10, fill=badge_col, outline=col, width=2)
-            draw_centered_text(draw, f"{TOWER_LABELS[ti]}: {tw['name'].upper()}", int(lx), 1352, get_font(20, bold=True),
-                               fill=TEXT_WHITE)
+            lx = tw["x"]
+            is_champ = t_sec >= REVEAL_START_SEC + 0.9 and ti == winner_idx
+            badge = ACCENT_GREEN if is_champ else ((60, 30, 40) if down else PANEL_BG_COLOR)
+            draw.rounded_rectangle([lx - 82, 1347, lx + 82, 1379], radius=10, fill=badge, outline=col, width=2)
+            draw_centered_text(draw, tw["name"].upper(), int(lx), 1351, get_font(20, bold=True), fill=TEXT_WHITE)
             if down:
-                draw_centered_text(draw, "COLLAPSED", int(lx), 420, get_font(34, title=True), fill=ACCENT_RED)
+                draw_centered_text(draw, f"OUT #{out_rank.get(ti, n)}", int(lx), 700, get_font(36, title=True), fill=ACCENT_RED)
 
-        # Richter meter
-        mag = 2.0 + 6.5 * (rec["amp"] / 70.0)
-        peak_mag = 2.0 + 6.5 * (sim["peak_amp"] / 70.0)
-        draw.rounded_rectangle([64, 1385, VIDEO_WIDTH - 64, 1495], radius=22,
+        # projectiles / wrecking ball / blasts
+        for (qx, qy, r, kind) in rec["proj"]:
+            if kind == "meteor":
+                draw.polygon([(qx - r * 0.8, qy - r * 0.2), (qx + r * 0.8, qy - r * 0.2), (qx, qy - r * 3.2)], fill=(255, 120, 30))
+                draw.ellipse([qx - r, qy - r, qx + r, qy + r], fill=(255, 170, 60), outline=(255, 230, 150), width=2)
+            elif kind == "cannon":
+                draw.ellipse([qx - r, qy - r, qx + r, qy + r], fill=(30, 30, 36), outline=(200, 200, 210), width=2)
+            else:
+                draw.ellipse([qx - r, qy - r, qx + r, qy + r], fill=(40, 20, 70), outline=(170, 92, 255), width=4)
+                draw.ellipse([qx - 8, qy - 18, qx + 2, qy - 8], fill=TEXT_WHITE)
+        if rec["wreck"] is not None:
+            wx, wy = rec["wreck"]
+            draw.line([(wx, 380), (wx, wy)], fill=(150, 150, 160), width=5)
+            draw.ellipse([wx - 46, wy - 46, wx + 46, wy + 46], fill=(60, 60, 70), outline=TEXT_WHITE, width=3)
+        for (bt, bx_, by_, br) in blasts:
+            age = st - bt
+            if 0.0 <= age < 0.35:
+                rr = br * (0.3 + 2.0 * age)
+                draw.ellipse([bx_ - rr, by_ - rr, bx_ + rr, by_ + rr], outline=(255, 200, 80), width=8)
+                if age < 0.12:
+                    draw.ellipse([bx_ - 40, by_ - 40, bx_ + 40, by_ + 40], fill=(255, 240, 180))
+
+        # intro: today's disaster banner
+        if t_sec < INTRO_SEC - 0.2:
+            draw.rounded_rectangle([60, 400, VIDEO_WIDTH - 60, 640], radius=28, fill=(18, 20, 36), outline=ACCENT_YELLOW, width=5)
+            tag = "SEASON FINALE · 3X POINTS" if is_finale else f"GAME {game_no}/10 · TODAY'S DISASTER"
+            draw_centered_text(draw, tag, VIDEO_WIDTH // 2, 420, get_font(32, bold=True), fill=ACCENT_YELLOW)
+            draw_centered_text(draw, sc["label"].upper(), VIDEO_WIDTH // 2, 470, get_font(96, title=True), fill=TEXT_WHITE)
+            draw_centered_text(draw, "6 towers enter. Which one stands last?", VIDEO_WIDTH // 2, 588,
+                               get_font(28, bold=True), fill=TEXT_MUTED)
+
+        # bottom panel
+        revealed = t_sec >= REVEAL_START_SEC + 0.9
+        standing = sum(1 for ti in range(n) if not (ti in fall_video_t and t_sec >= fall_video_t[ti]))
+        draw.rounded_rectangle([64, 1392, VIDEO_WIDTH - 64, 1500], radius=22,
                                fill=(18, 62, 42) if revealed else PANEL_BG_COLOR,
                                outline=ACCENT_GREEN if revealed else PANEL_BORDER_COLOR, width=3)
         if revealed:
-            draw_centered_text(draw, f"TOWER {TOWER_LABELS[winner_idx]} STANDS LAST!", VIDEO_WIDTH // 2, 1394,
+            draw_centered_text(draw, f"{winner_design.upper()} STANDS LAST!", VIDEO_WIDTH // 2, 1398,
                                get_font(64, title=True), fill=TEXT_WHITE)
-            draw_centered_text(draw, f"{towers[winner_idx]['name']} outlasted a magnitude {peak_mag:.1f} quake",
-                               VIDEO_WIDTH // 2, 1460, get_font(26, bold=True), fill=ACCENT_YELLOW)
+            draw_centered_text(draw, f"Survived the {sc['label']}  •  +{SURVIVAL_POINTS[0] * series['multiplier']} pts",
+                               VIDEO_WIDTH // 2, 1464, get_font(26, bold=True), fill=ACCENT_YELLOW)
         else:
-            draw.text((92, 1400), "MAGNITUDE", font=get_font(26, bold=True), fill=ACCENT_YELLOW)
-            draw.text((92, 1432), f"{mag:.1f}", font=get_font(48, title=True), fill=TEXT_WHITE)
-            bar_x0, bar_x1 = 260, VIDEO_WIDTH - 100
-            draw.rounded_rectangle([bar_x0, 1428, bar_x1, 1466], radius=12, fill=(20, 22, 38))
-            frac = rec["amp"] / 70.0
-            bar_col = ACCENT_GREEN if frac < 0.4 else (ACCENT_YELLOW if frac < 0.75 else ACCENT_RED)
-            if frac > 0.01:
-                draw.rounded_rectangle([bar_x0, 1428, bar_x0 + (bar_x1 - bar_x0) * frac, 1466], radius=12, fill=bar_col)
-            draw.text((bar_x0, 1398), "WHICH TOWER STANDS LAST?  A · B · C", font=get_font(24, bold=True), fill=TEXT_MUTED)
+            draw.text((92, 1404), "STILL STANDING", font=get_font(24, bold=True), fill=ACCENT_YELLOW)
+            draw.text((92, 1434), f"{standing}/{n}", font=get_font(50, title=True), fill=TEXT_WHITE)
+            bar_x0, bar_x1 = 300, VIDEO_WIDTH - 100
+            draw.text((bar_x0, 1404), f"{sc['meter']}  •  {sc['label'].upper()}", font=get_font(24, bold=True), fill=TEXT_MUTED)
+            draw.rounded_rectangle([bar_x0, 1440, bar_x1, 1476], radius=12, fill=(20, 22, 38))
+            lv = rec["level"]
+            if lv > 0.01:
+                bar_col = ACCENT_GREEN if lv < 0.4 else (ACCENT_YELLOW if lv < 0.75 else ACCENT_RED)
+                draw.rounded_rectangle([bar_x0, 1440, bar_x0 + (bar_x1 - bar_x0) * lv, 1476], radius=12, fill=bar_col)
+
         if t_sec >= card_from:
-            draw_series_card(frame, "Quake Series", series, "WINS", series_labels, series_colors, winner_design)
+            footer = (f"NEXT DISASTER: {SCENARIOS[next_scenario]['label'].upper()}" if next_scenario and game_no < SERIES_LENGTH - 1
+                      else ("NEXT: APOCALYPSE FINALE — 3X POINTS!" if next_scenario else None))
+            draw_series_card(frame, "Tower Defence", series, "PTS", {k: k for k in DESIGN_NAMES}, DESIGN_COLORS,
+                             winner_design, footer_text=footer)
         return frame
 
     video_path = produce_physics_video(
@@ -336,14 +585,14 @@ def generate_tower_quake_video(
         countdown_start_sec=COUNTDOWN_START_SEC,
         reveal_start_sec=REVEAL_START_SEC,
         outro_start_sec=OUTRO_START_SEC,
-        hook_spoken="Earthquake incoming! Which tower is the last one standing: A, B, or C?",
-        reveal_spoken=f"Tower {TOWER_LABELS[winner_idx]}, the {towers[winner_idx]['name']}, is the last one standing!",
+        hook_spoken=f"{sc['spoken']} Six towers, which one stands last?",
+        reveal_spoken=f"The {winner_design} is the last tower standing!",
         sfx_events=sfx,
         draw_frame=draw_frame,
-        series_badge=("QUAKE FINALE · 3X" if series["is_finale"] else f"QUAKE SERIES · {series['game']}/10"),
-        hook_title="WHICH TOWER STANDS LAST?",
-        subtitle_line=f"{' vs '.join(designs)}  •  Seed: {seed}",
-        footer_credit=f"Quake seed: {seed} • Physics: Pymunk 2D",
+        series_badge=("TOWER DEFENCE FINALE · 3X" if series["is_finale"] else f"TOWER DEFENCE · GAME {series['game']}/10"),
+        hook_title=f"{sc['label'].upper()}: WHO STANDS LAST?" if len(sc["label"]) <= 11 else "WHICH TOWER STANDS LAST?",
+        subtitle_line=f"6 Towers  •  Disaster: {sc['label']}  •  Seed: {seed}",
+        footer_credit=f"Tower seed: {seed} • Physics: Pymunk 2D",
         wildcard=wildcard,
     )
 
@@ -352,16 +601,19 @@ def generate_tower_quake_video(
         "seed": seed,
         "video_path": video_path,
         "duration_sec": TOTAL_DURATION,
-        "winner": winner_label,
-        "winner_tower": TOWER_LABELS[winner_idx],
+        "winner": f"{winner_design} (survived the {sc['label']})",
+        "winner_tower": winner_design,
+        "scenario": scenario,
+        "scenario_label": sc["label"],
         "designs": designs,
-        "series_short": f"Tower Quake {series['game']}/10",
+        "survival_order": [towers[ti]["name"] for ti in survival_order],
+        "series_short": f"Tower Defence {series['game']}/10",
         "series_game": series["game"],
         "series_finale": series["is_finale"],
         "series_champion": series["champion"],
-        "topic_short": "Earthquake",
+        "topic_short": sc["label"],
         "reveal_timestamp_sec": REVEAL_START_SEC,
         "comment_question": (
-            f"{winner_label} stood last! 🏗️ Did you call it? Which tower design should face the next quake? 👇"
+            f"The {winner_design} survived the {sc['label']}! 🏗️ Which tower survives the next disaster? 👇"
         ),
     }

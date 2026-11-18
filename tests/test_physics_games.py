@@ -98,17 +98,35 @@ def test_bucket_drop_physics():
     assert 1 <= sim["final_bucket"] <= N_BUCKETS
 
 
-def test_tower_quake_physics_has_last_standing_tower():
-    from generators.tower_quake import pick_designs, run_tuned_quake
+def test_tower_defence_season_schedule():
+    from generators.tower_quake import FINALE_SCENARIO, REGULAR_SCENARIOS, pick_designs, scenario_for_game
+
+    assert len(REGULAR_SCENARIOS) == 9
+    season = [scenario_for_game(1, g) for g in range(1, 11)]
+    assert sorted(season[:9]) == sorted(REGULAR_SCENARIOS)  # every disaster exactly once
+    assert season[9] == FINALE_SCENARIO
+    assert scenario_for_game(2, 1) in REGULAR_SCENARIOS
+    assert len(set(pick_designs("x"))) == 6  # all six towers compete every game
+
+
+@pytest.mark.parametrize("scenario", ["earthquake", "ground_slam", "tilt", "meteor_shower", "wrecking_ball",
+                                      "hurricane", "cannon_barrage", "bowling", "bombs", "apocalypse"])
+def test_tower_defence_every_disaster_simulates(scenario):
+    from generators.tower_quake import pick_designs, simulate_defence
+
+    sim = simulate_defence("T-test", pick_designs("T-test"), scenario, power=3.0, attempt=0, max_t=5.0)
+    assert len(sim["records"]) == 600
+    assert len(sim["records"][-1]["blocks"]) == 6
+
+
+def test_tower_defence_tuned_has_single_last_standing():
+    from generators.tower_quake import pick_designs, run_tuned_defence
 
     designs = pick_designs("20261118-A")
-    assert len(set(designs)) == 3
-    sim = run_tuned_quake("20261118-A", designs)
+    sim = run_tuned_defence("20261118-A", designs, "meteor_shower")
     falls = sim["falls"]
-    assert len(falls) >= 2
-    assert len({ti for _, ti in falls[:2]}) == 2
-    survivors = {0, 1, 2} - {ti for _, ti in falls[:2]}
-    assert len(survivors) == 1  # exactly one "last tower standing" once two have fallen
+    assert len(falls) >= 5
+    assert len({0, 1, 2, 3, 4, 5} - {ti for _, ti in falls[:5]}) == 1
 
 
 def test_downhill_derby_physics():

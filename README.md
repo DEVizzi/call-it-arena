@@ -19,7 +19,7 @@ Every video follows the high-retention **Call It Arena** structure:
 | **5. Algorithm Sorting Race** | ~10% (Slot A) | `generators/sorting_race.py` | Side-by-side split-screen race of two sorting algorithms (`QuickSort`, `MergeSort`, `HeapSort`, `ShellSort`) on identical scrambled arrays with pitched synthesizer ticks. |
 | **6. Guess The Year** | ~10% (Slot A) | `generators/guess_the_year.py` | Wikipedia `"On this day"` API + license-checked Wikimedia Commons image (`CC0`, `Public domain`, `CC BY`, `CC BY-SA`), masking the year (`[ ???? ]`) until the reveal. |
 | **7. Plinko Bucket Drop** | ~10% (Slot A) | `generators/bucket_drop.py` | A golden ball falls down a tall scrolling `Pymunk` Plinko tower (pegs, bumpers, spinners) into 7 numbered buckets. Lands in slow motion right after the countdown. |
-| **8. Earthquake Tower Survival** | ~10% (Slot A) | `generators/tower_quake.py` | Three rigid-body block towers (6 designs) on a shaking plate with a rising magnitude meter — which one is the last tower standing? |
+| **8. Tower Defence Season** | ~10% (Slot A) | `generators/tower_quake.py` | All 6 rigid-body tower designs (Needle, Temple, Zigzag, Twin Towers, Spire, Fortress) face a different escalating disaster every game — Earthquake, Ground Slam, Tilting Ground, Meteor Shower, Wrecking Ball, Hurricane, Cannon Barrage, Bowling Strike, Bomb Blitz — until one tower stands last. |
 | **9. Downhill Derby** | ~10% (Slot A) | `generators/downhill_derby.py` | Four engine-less jointed physics cars (5 designs) roll down a procedural bumpy hill with jumps; scrolling camera + mini track map. |
 
 ### Seasons, finales & champions
@@ -28,7 +28,7 @@ Every video follows the high-retention **Call It Arena** structure:
 | :--- | :--- | :--- |
 | Country Marble League | 28-race season: Group Stage (1–14) → Knockouts (15–21, last place eliminated) → Championship Finals (22–27, **2x points**) → **Grand Final race 28** | Grand Final = 40s **MEGA RACE** on the multi-stage `mega_gauntlet` (ring → windmills → hourglass) at **3x points**, then a **Season Champion** ceremony (trophy, podium, final table) before Season N+1 starts. Arena types still change every day. |
 | Downhill Derby | 10-race Derby Series, all 5 cars every race (points 10/6/4/2/1) | Race 10 = finale at 3x; standings card after every race, **Champion Car** card after the finale. |
-| Tower Quake | 10-quake series counting which tower *design* stands last | Quake 10 = finale (win counts 3x) → **Champion Design**. |
+| Tower Defence | 10-game season: the 9 disasters shuffled (each once), survival points 10/7/5/3/2/1 | Game 10 = **APOCALYPSE** finale (quake + meteors + hurricane) at 3x → **Tower Defence Champion**. Standings + "next disaster" teaser after every game. |
 | Plinko Bucket Drop | 10-drop "Hot Bucket" series | Drop 10 = finale (3x) → **Hottest Bucket** of the series. |
 
 Series state lives in `state/series.json`; league state in `state/league.json`. Neither is ever written by dry runs or the preview workflow.
@@ -135,5 +135,5 @@ All timing and format distribution weights live in [`schedule.yaml`](schedule.ya
     - `Algorithm Sorting Race`
     - `Guess The Year History Quiz`
     - `Plinko Bucket Drop`
-    - `Earthquake Tower Survival`
+    - `Tower Defence Season`
     - `Downhill Derby (Physics Cars)`

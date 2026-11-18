@@ -78,9 +78,10 @@ def main() -> int:
         from generators.tower_quake import generate_tower_quake_video
 
         meta = generate_tower_quake_video(seed=args.seed, output_dir=out, update_state=False,
-                                          force_game=10 if args.finale else None)
-        times = [1.0, 8.0, 16.0, 19.8, 22.5]
-        name = "tower_quake_FINALE" if args.finale else "tower_quake"
+                                          force_game=10 if args.finale else None,
+                                          scenario_override=None if args.arena == "auto" else args.arena)
+        times = [1.5, 9.0, 16.0, 19.6, 22.5]
+        name = f"tower_defence_{meta['scenario']}" + ("_FINALE" if args.finale else "")
     else:
         from generators.downhill_derby import generate_downhill_derby_video
 

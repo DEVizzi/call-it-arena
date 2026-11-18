@@ -114,6 +114,7 @@ def draw_series_card(
     highlight_key: str,
     top: int = 400,
     bottom: int = 1330,
+    footer_text: Optional[str] = None,
 ) -> None:
     """Series standings overlay (after the reveal). Finale variant crowns the series champion in gold."""
     draw = ImageDraw.Draw(frame)
@@ -149,5 +150,7 @@ def draw_series_card(
         vb = draw.textbbox((0, 0), val, font=font)
         draw.text((VIDEO_WIDTH - 110 - (vb[2] - vb[0]), y + 10), val, font=font, fill=col)
         y += row_h
-    if not finale and summary["game"] == SERIES_LENGTH - 1:
+    if footer_text:
+        draw_centered_text(draw, footer_text, cx, bottom - 44, get_font(28, bold=True), fill=GOLD)
+    elif not finale and summary["game"] == SERIES_LENGTH - 1:
         draw_centered_text(draw, "NEXT GAME: SERIES FINALE — TRIPLE POINTS!", cx, bottom - 44, get_font(28, bold=True), fill=GOLD)
