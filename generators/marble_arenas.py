@@ -433,6 +433,41 @@ def _pendulum_gauntlet(space, rng, n, r, intensity) -> ArenaConfig:
     )
 
 
+def _mega_gauntlet(space, rng, n, r, intensity) -> ArenaConfig:
+    """
+    GRAND FINAL ONLY — three stages in one screen:
+      1) break out of a spinning ring (with a centre spinner),  2) survive the windmill field,
+      3) squeeze through the hourglass neck to the finish line.
+    """
+    kit = ArenaKit(space)
+    _box_walls(kit)
+    rc = (ARENA_CX, 612.0)
+    speed, gap = _ring_params(rng, intensity)
+    kit.add_kinematic("mega_outer", rc, angular_velocity=speed * 0.9, angle=GAP_UP)
+    kit.ring(222.0, gap * 0.85, (255, 210, 60), "mega_outer", thickness=11.0)
+    kit.add_kinematic("mega_spinner", rc, angular_velocity=-speed * 1.5)
+    kit.seg((-92, 0), (92, 0), 9.0, PINK, "mega_spinner", elasticity=0.95)
+    base = rng.uniform(1.7, 2.3) * rng.choice([-1.0, 1.0])
+    for i, (x, y) in enumerate([(200.0, 925.0), (540.0, 960.0), (880.0, 925.0), (360.0, 1085.0), (720.0, 1085.0)]):
+        key = f"mega_mill{i}"
+        kit.add_kinematic(key, (x, y), angular_velocity=base * (1 if i % 2 == 0 else -1))
+        col = CYAN if i % 2 == 0 else LIME
+        kit.seg((-78, 0), (78, 0), 8.0, col, key, elasticity=0.75)
+        kit.seg((0, -78), (0, 78), 8.0, col, key, elasticity=0.75)
+    neck = rng.uniform(128.0, 142.0)
+    kit.seg((WALL_L, 1170.0), (540.0 - neck / 2, 1268.0), 8.0, (255, 210, 60), elasticity=0.4, friction=0.05)
+    kit.seg((WALL_R, 1170.0), (540.0 + neck / 2, 1268.0), 8.0, (255, 210, 60), elasticity=0.4, friction=0.05)
+    return ArenaConfig(
+        "mega_gauntlet", "Mega Gauntlet", "GRAND FINAL: MEGA RACE!",
+        "Ring, windmills, hourglass. Who wins the Grand Final?", "line", kit,
+        _annulus_spawn(rng, n, r, 108.0, 178.0, center=rc), (0.0, 470.0 * intensity),
+        spawn_velocity=(-150.0, 150.0, -150.0, 90.0),
+        marble_elasticity=0.6, marble_friction=0.12, bg_style="lanes", finish_word="FINISHED",
+    )
+
+
+MEGA_VARIANT = "mega_gauntlet"
+
 ARENA_BUILDERS: Dict[str, Callable[..., ArenaConfig]] = {
     "single_ring": _single_ring,
     "double_ring": lambda s, g, n, r, i: _double_ring(s, g, n, r, i, pegs=False),
@@ -450,7 +485,9 @@ ARENA_BUILDERS: Dict[str, Callable[..., ArenaConfig]] = {
     "pendulum_gauntlet": _pendulum_gauntlet,
 }
 
+# Daily rotation pool (the Grand Final mega arena is reserved for race 28 only)
 ARENA_VARIANTS: List[str] = list(ARENA_BUILDERS.keys())
+ARENA_BUILDERS[MEGA_VARIANT] = _mega_gauntlet
 
 
 def build_arena(variant: str, space: pymunk.Space, rng: random.Random, n: int, marble_radius: float, intensity: float) -> ArenaConfig:

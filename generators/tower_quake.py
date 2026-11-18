@@ -43,6 +43,7 @@ from common.branding import (
 from common.physics_kit import TimeRemap, attach_impulse_sfx, rotate_point, sim_index
 from common.physics_video import produce_physics_video
 from common.render import draw_centered_text
+from common.series import draw_series_card, load_series_state, record_series_game, save_series_state
 
 GROUND_Y = 1240.0
 FLOOR_Y = 1335.0
@@ -235,6 +236,8 @@ def generate_tower_quake_video(
     seed: str,
     output_dir: Path = OUTPUT_DIR,
     wildcard: Optional[Dict[str, str]] = None,
+    update_state: bool = True,
+    force_game: Optional[int] = None,
 ) -> Dict[str, Any]:
     designs = pick_designs(seed)
     sim = run_tuned_quake(seed, designs)
@@ -246,6 +249,20 @@ def generate_tower_quake_video(
     winner_label = f"Tower {TOWER_LABELS[winner_idx]} ({towers[winner_idx]['name']})"
     remap = TimeRemap(t_decisive, INTRO_SEC, COUNTDOWN_START_SEC, REVEAL_START_SEC, slowmo=0.2, post=0.6)
     fall_video_t = {ti: remap.inverse(ft) for ft, ti in sim["falls"]}
+
+    # 10-quake series: which tower DESIGN stands last most often (finale win counts 3x)
+    if force_game and update_state:
+        raise ValueError("force_game is a preview mode and requires update_state=False")
+    series_state = load_series_state()
+    winner_design = towers[winner_idx]["name"]
+    series = record_series_game(series_state, "tower_quake", {winner_design: 1}, winner_design, seed,
+                                all_keys=list(TOWER_DESIGNS.keys()), force_game=force_game)
+    if update_state:
+        save_series_state(series_state)
+    palette = [ACCENT_RED, ACCENT_BLUE, ACCENT_GREEN, ACCENT_YELLOW, (170, 92, 255), (0, 208, 222)]
+    series_colors = {name: palette[i % len(palette)] for i, name in enumerate(TOWER_DESIGNS.keys())}
+    series_labels = {name: name for name in TOWER_DESIGNS.keys()}
+    card_from = remap.inverse(t_decisive) + 1.6
 
     sfx = [SfxEvent(remap.inverse(e.timestamp_sec), e.kind, e.gain, e.pitch_shift) for e in sim["sfx"]]
 
@@ -308,6 +325,8 @@ def generate_tower_quake_video(
             if frac > 0.01:
                 draw.rounded_rectangle([bar_x0, 1428, bar_x0 + (bar_x1 - bar_x0) * frac, 1466], radius=12, fill=bar_col)
             draw.text((bar_x0, 1398), "WHICH TOWER STANDS LAST?  A · B · C", font=get_font(24, bold=True), fill=TEXT_MUTED)
+        if t_sec >= card_from:
+            draw_series_card(frame, "Quake Series", series, "WINS", series_labels, series_colors, winner_design)
         return frame
 
     video_path = produce_physics_video(
@@ -321,7 +340,7 @@ def generate_tower_quake_video(
         reveal_spoken=f"Tower {TOWER_LABELS[winner_idx]}, the {towers[winner_idx]['name']}, is the last one standing!",
         sfx_events=sfx,
         draw_frame=draw_frame,
-        series_badge="EARTHQUAKE TOWER SURVIVAL",
+        series_badge=("QUAKE FINALE · 3X" if series["is_finale"] else f"QUAKE SERIES · {series['game']}/10"),
         hook_title="WHICH TOWER STANDS LAST?",
         subtitle_line=f"{' vs '.join(designs)}  •  Seed: {seed}",
         footer_credit=f"Quake seed: {seed} • Physics: Pymunk 2D",
@@ -336,7 +355,10 @@ def generate_tower_quake_video(
         "winner": winner_label,
         "winner_tower": TOWER_LABELS[winner_idx],
         "designs": designs,
-        "series_short": "Tower Quake",
+        "series_short": f"Tower Quake {series['game']}/10",
+        "series_game": series["game"],
+        "series_finale": series["is_finale"],
+        "series_champion": series["champion"],
         "topic_short": "Earthquake",
         "reveal_timestamp_sec": REVEAL_START_SEC,
         "comment_question": (

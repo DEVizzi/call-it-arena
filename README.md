@@ -22,6 +22,17 @@ Every video follows the high-retention **Call It Arena** structure:
 | **8. Earthquake Tower Survival** | ~10% (Slot A) | `generators/tower_quake.py` | Three rigid-body block towers (6 designs) on a shaking plate with a rising magnitude meter — which one is the last tower standing? |
 | **9. Downhill Derby** | ~10% (Slot A) | `generators/downhill_derby.py` | Four engine-less jointed physics cars (5 designs) roll down a procedural bumpy hill with jumps; scrolling camera + mini track map. |
 
+### Seasons, finales & champions
+
+| Game | Structure | Finale & winner showcase |
+| :--- | :--- | :--- |
+| Country Marble League | 28-race season: Group Stage (1–14) → Knockouts (15–21, last place eliminated) → Championship Finals (22–27, **2x points**) → **Grand Final race 28** | Grand Final = 40s **MEGA RACE** on the multi-stage `mega_gauntlet` (ring → windmills → hourglass) at **3x points**, then a **Season Champion** ceremony (trophy, podium, final table) before Season N+1 starts. Arena types still change every day. |
+| Downhill Derby | 10-race Derby Series, all 5 cars every race (points 10/6/4/2/1) | Race 10 = finale at 3x; standings card after every race, **Champion Car** card after the finale. |
+| Tower Quake | 10-quake series counting which tower *design* stands last | Quake 10 = finale (win counts 3x) → **Champion Design**. |
+| Plinko Bucket Drop | 10-drop "Hot Bucket" series | Drop 10 = finale (3x) → **Hottest Bucket** of the series. |
+
+Series state lives in `state/series.json`; league state in `state/league.json`. Neither is ever written by dry runs or the preview workflow.
+
 All physics formats share `common/physics_kit.py` (declarative arena geometry, kinematic drivers, time remapping so the decisive moment lands just after the 3-2-1 reveal) and `common/physics_video.py` (TTS + audio + HUD + FFmpeg).
 
 > [!TIP]

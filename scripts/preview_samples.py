@@ -49,6 +49,8 @@ def main() -> int:
     ap.add_argument("--arena", default="auto")
     ap.add_argument("--seed", required=True)
     ap.add_argument("--out", default="preview_out")
+    ap.add_argument("--finale", action="store_true",
+                    help="Preview the season/series finale (in memory only; nothing is saved)")
     args = ap.parse_args()
     out = Path(args.out)
     out.mkdir(parents=True, exist_ok=True)
@@ -61,27 +63,31 @@ def main() -> int:
             output_dir=out,
             update_state=False,  # NEVER write state/league.json from a preview
             variant_override=None if args.arena == "auto" else args.arena,
+            force_grand_final=args.finale,
         )
-        times = [1.0, 8.0, 16.5, 20.0, 24.5]
-        name = f"marble_league_{meta['variant']}"
+        times = [1.0, 14.0, 30.5, 34.0, 38.0] if args.finale else [1.0, 8.0, 16.5, 20.0, 24.5]
+        name = "marble_league_GRAND_FINAL" if args.finale else f"marble_league_{meta['variant']}"
     elif args.format == "bucket_drop":
         from generators.bucket_drop import generate_bucket_drop_video
 
-        meta = generate_bucket_drop_video(seed=args.seed, output_dir=out)
-        times = [1.0, 8.0, 16.0, 19.8, 22.0]
-        name = "bucket_drop"
+        meta = generate_bucket_drop_video(seed=args.seed, output_dir=out, update_state=False,
+                                          force_game=10 if args.finale else None)
+        times = [1.0, 8.0, 16.0, 19.8, 22.5]
+        name = "bucket_drop_FINALE" if args.finale else "bucket_drop"
     elif args.format == "tower_quake":
         from generators.tower_quake import generate_tower_quake_video
 
-        meta = generate_tower_quake_video(seed=args.seed, output_dir=out)
-        times = [1.0, 8.0, 16.0, 19.8, 22.0]
-        name = "tower_quake"
+        meta = generate_tower_quake_video(seed=args.seed, output_dir=out, update_state=False,
+                                          force_game=10 if args.finale else None)
+        times = [1.0, 8.0, 16.0, 19.8, 22.5]
+        name = "tower_quake_FINALE" if args.finale else "tower_quake"
     else:
         from generators.downhill_derby import generate_downhill_derby_video
 
-        meta = generate_downhill_derby_video(seed=args.seed, output_dir=out)
-        times = [1.0, 8.0, 16.0, 19.8, 22.0]
-        name = "downhill_derby"
+        meta = generate_downhill_derby_video(seed=args.seed, output_dir=out, update_state=False,
+                                             force_game=10 if args.finale else None)
+        times = [1.5, 8.0, 16.0, 19.4, 22.5]
+        name = "downhill_derby_FINALE" if args.finale else "downhill_derby"
 
     video = Path(meta["video_path"])
     final_mp4 = out / f"{name}.mp4"

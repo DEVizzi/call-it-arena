@@ -42,6 +42,7 @@ from common.branding import (
 from common.physics_kit import ArenaKit, TimeRemap, attach_impulse_sfx, sim_index
 from common.physics_video import produce_physics_video
 from common.render import draw_centered_text
+from common.series import draw_series_card, load_series_state, record_series_game, save_series_state
 
 WORLD_H = 2750.0
 VIEW_TOP = 380
@@ -201,6 +202,8 @@ def generate_bucket_drop_video(
     seed: str,
     output_dir: Path = OUTPUT_DIR,
     wildcard: Optional[Dict[str, str]] = None,
+    update_state: bool = True,
+    force_game: Optional[int] = None,
 ) -> Dict[str, Any]:
     sim = run_tuned_drop(seed)
     kit: ArenaKit = sim["kit"]
@@ -208,6 +211,19 @@ def generate_bucket_drop_video(
     remap = TimeRemap(sim["landed_t"], INTRO_SEC, COUNTDOWN_START_SEC, REVEAL_START_SEC, slowmo=0.2, post=0.6)
     winner_bucket = sim["final_bucket"]
     decisive_video_t = remap.inverse(sim["landed_t"])
+
+    # 10-drop series: "hot bucket" leaderboard (finale landing counts 3x)
+    if force_game and update_state:
+        raise ValueError("force_game is a preview mode and requires update_state=False")
+    series_state = load_series_state()
+    bucket_keys = [f"Bucket {i}" for i in range(1, N_BUCKETS + 1)]
+    win_key = f"Bucket {winner_bucket}"
+    series = record_series_game(series_state, "bucket_drop", {win_key: 1}, win_key, seed, all_keys=bucket_keys,
+                                force_game=force_game)
+    if update_state:
+        save_series_state(series_state)
+    series_colors = {k: BUCKET_COLORS[i] for i, k in enumerate(bucket_keys)}
+    series_labels = {k: k for k in bucket_keys}
 
     sfx = [SfxEvent(remap.inverse(e.timestamp_sec), "tick", min(0.7, e.gain), e.pitch_shift) for e in sim["sfx"]]
 
@@ -288,6 +304,8 @@ def generate_bucket_drop_video(
                                get_font(36, bold=True), fill=TEXT_WHITE)
             draw_centered_text(draw, f"DEPTH {int(frac * 100)}%  •  COMMENT YOUR NUMBER", VIDEO_WIDTH // 2, 1452,
                                get_font(26, bold=True), fill=TEXT_MUTED)
+        if t_sec >= decisive_video_t + 1.6:
+            draw_series_card(frame, "Hot Bucket Series", series, "HITS", series_labels, series_colors, win_key)
         return frame
 
     video_path = produce_physics_video(
@@ -301,7 +319,7 @@ def generate_bucket_drop_video(
         reveal_spoken=f"Bucket {winner_bucket}! Did you call it?",
         sfx_events=sfx,
         draw_frame=draw_frame,
-        series_badge="PLINKO BUCKET DROP",
+        series_badge=("PLINKO FINALE · 3X" if series["is_finale"] else f"PLINKO SERIES · DROP {series['game']}/10"),
         hook_title="WHICH BUCKET WILL IT HIT?",
         subtitle_line=f"7 Buckets  •  1 Ball  •  Seed: {seed}",
         footer_credit=f"Drop seed: {seed} • Physics: Pymunk 2D",
@@ -315,7 +333,10 @@ def generate_bucket_drop_video(
         "duration_sec": TOTAL_DURATION,
         "winner": f"Bucket {winner_bucket}",
         "winner_bucket": winner_bucket,
-        "series_short": "Plinko Drop",
+        "series_short": f"Plinko {series['game']}/10",
+        "series_game": series["game"],
+        "series_finale": series["is_finale"],
+        "series_champion": series["champion"],
         "topic_short": "Plinko",
         "reveal_timestamp_sec": REVEAL_START_SEC,
         "comment_question": (

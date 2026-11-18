@@ -43,7 +43,9 @@ jobs:
       - name: Run full test suite
         run: pytest -v
       - name: Verify league state untouched
-        run: git diff --exit-code -- state/
+        run: |
+          git diff --exit-code -- state/
+          test -z "$(git status --porcelain -- state/)"
 
   render:
     runs-on: ubuntu-latest
@@ -52,15 +54,13 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - { name: "league-auto-next-arena", format: marble_league, arena: auto, seed: "20261118-B" }
-          - { name: "league-triple-ring", format: marble_league, arena: triple_ring, seed: "PREVIEW-L1" }
-          - { name: "league-gravity-well", format: marble_league, arena: gravity_well, seed: "PREVIEW-L2" }
-          - { name: "league-zigzag-ramps", format: marble_league, arena: zigzag_ramps, seed: "PREVIEW-L3" }
-          - { name: "league-pendulum-gauntlet", format: marble_league, arena: pendulum_gauntlet, seed: "PREVIEW-L4" }
-          - { name: "league-square-crusher", format: marble_league, arena: square_crusher, seed: "PREVIEW-L5" }
-          - { name: "new-bucket-drop", format: bucket_drop, arena: auto, seed: "PREVIEW-B1" }
-          - { name: "new-tower-quake", format: tower_quake, arena: auto, seed: "PREVIEW-T1" }
-          - { name: "new-downhill-derby", format: downhill_derby, arena: auto, seed: "PREVIEW-D1" }
+          - { name: "league-auto-next-arena", format: marble_league, arena: auto, seed: "20261118-B", finale: "" }
+          - { name: "league-GRAND-FINAL-mega-race", format: marble_league, arena: auto, seed: "PREVIEW-GF1", finale: "--finale" }
+          - { name: "league-windmill-drop", format: marble_league, arena: windmill_drop, seed: "PREVIEW-L6", finale: "" }
+          - { name: "derby-lanes-and-lineup", format: downhill_derby, arena: auto, seed: "PREVIEW-D2", finale: "" }
+          - { name: "derby-SERIES-FINALE", format: downhill_derby, arena: auto, seed: "PREVIEW-D3", finale: "--finale" }
+          - { name: "tower-quake-series", format: tower_quake, arena: auto, seed: "PREVIEW-T2", finale: "" }
+          - { name: "plinko-SERIES-FINALE", format: bucket_drop, arena: auto, seed: "PREVIEW-B2", finale: "--finale" }
     steps:
       - uses: actions/checkout@v4
         with:
@@ -90,11 +90,12 @@ jobs:
             --format "${{ matrix.format }}" \
             --arena "${{ matrix.arena }}" \
             --seed "${{ matrix.seed }}" \
-            --out preview_out
+            --out preview_out ${{ matrix.finale }}
       - name: Verify league state untouched
         run: |
           sha256sum -c /tmp/state_before.sha
           git diff --exit-code -- state/
+          test -z "$(git status --porcelain -- state/)"  # no new state files (e.g. series.json) either
       - name: Upload preview artifact
         uses: actions/upload-artifact@v4
         with:

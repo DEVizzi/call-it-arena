@@ -2,7 +2,7 @@
 Call It Arena — Format 9: Downhill Derby (`generators/downhill_derby.py`).
 
 "Which car reaches the finish first?"
-- Four gravity-powered Pymunk cars (picked from 5 designs: Monster Truck, Racer, Tank, Buggy, Mini)
+- Five gravity-powered Pymunk cars (Monster Truck, Racer, Tank, Buggy, Mini — fixed letters A–E)
   with real wheel joints roll down a long procedurally generated bumpy hill. No engines — pure physics,
   so wheel size, mass and wheelbase decide who flies, who flips and who wins.
 - Cars are "ghosts" (no car-to-car collisions) so every start is fair, and each one is drawn in its own
@@ -11,6 +11,8 @@ Call It Arena — Format 9: Downhill Derby (`generators/downhill_derby.py`).
 - Scrolling camera follows the top two cars; a mini track map shows the whole field.
 - The first finish is time-remapped to land right after the reveal (slow-mo during the countdown).
 - Gravity is auto-tuned per seed so the race fills the timeline.
+- Runs as a 10-race "Derby Series" (`common/series.py`): points 10/6/4/2/1, race 10 = finale at 3x,
+  standings card after every reveal and a champion card after the finale.
 """
 
 import hashlib
@@ -45,14 +47,17 @@ from common.branding import (
 from common.physics_kit import TimeRemap, attach_impulse_sfx, draw_checkered_line, rotate_point, sim_index
 from common.physics_video import produce_physics_video
 from common.render import draw_centered_text
+from common.series import draw_series_card, load_series_state, record_series_game, save_series_state
 
 SIM_HZ = 120
 X_START = 0.0
 X_FINISH = 4700.0
 X_END = 8200.0
 VIEW_TOP, VIEW_BOTTOM = 380, 1340
-LABELS = ["A", "B", "C", "D"]
-CAR_COLORS = [ACCENT_RED, ACCENT_BLUE, ACCENT_GREEN, ACCENT_YELLOW]
+LABELS = ["A", "B", "C", "D", "E"]
+CAR_COLORS = [ACCENT_RED, ACCENT_BLUE, ACCENT_GREEN, ACCENT_YELLOW, (170, 92, 255)]
+DERBY_POINTS = [10, 6, 4, 2, 1]
+SERIES_KEY = "downhill_derby"
 LANE_DY = 62.0  # vertical spacing between the visual lanes
 
 TOTAL_DURATION = 24.0
@@ -76,10 +81,8 @@ def _seed_to_int(seed_str: str) -> int:
 
 
 def pick_cars(seed: str) -> List[str]:
-    rng = random.Random(_seed_to_int(f"{seed}|cars"))
-    names = list(CAR_DESIGNS.keys())
-    rng.shuffle(names)
-    return names[:4]
+    """All 5 designs race every time with FIXED letters/colours so a 10-race series is easy to follow."""
+    return list(CAR_DESIGNS.keys())
 
 
 def build_terrain(seed: str) -> List[Tuple[float, float]]:
@@ -213,6 +216,8 @@ def generate_downhill_derby_video(
     seed: str,
     output_dir: Path = OUTPUT_DIR,
     wildcard: Optional[Dict[str, str]] = None,
+    update_state: bool = True,
+    force_game: Optional[int] = None,
 ) -> Dict[str, Any]:
     cars = pick_cars(seed)
     terrain = build_terrain(seed)
@@ -223,6 +228,18 @@ def generate_downhill_derby_video(
     remap = TimeRemap(t1, INTRO_SEC, COUNTDOWN_START_SEC, REVEAL_START_SEC, slowmo=0.2, post=0.6)
     finish_video_t = {ci: remap.inverse(sim["cars"][ci]["finish_t"]) for ci in sim["order"]}
     winner_name = f"Car {LABELS[winner_idx]} ({cars[winner_idx]})"
+
+    # 10-race Derby Series (finale = 3x points). Only persisted when update_state=True.
+    if force_game and update_state:
+        raise ValueError("force_game is a preview mode and requires update_state=False")
+    series_state = load_series_state()
+    awards = {cars[ci]: DERBY_POINTS[pos] for pos, ci in enumerate(sim["full_order"][:len(DERBY_POINTS)])}
+    series = record_series_game(series_state, SERIES_KEY, awards, cars[winner_idx], seed, all_keys=cars,
+                                force_game=force_game)
+    if update_state:
+        save_series_state(series_state)
+    series_labels = {name: f"{LABELS[i]}: {name}" for i, name in enumerate(cars)}
+    series_colors = {name: CAR_COLORS[i] for i, name in enumerate(cars)}
     sfx = [SfxEvent(remap.inverse(e.timestamp_sec), e.kind, min(0.7, e.gain), e.pitch_shift) for e in sim["sfx"]]
 
     y_finish = _terrain_y(terrain, X_FINISH)
@@ -272,17 +289,17 @@ def generate_downhill_derby_video(
         draw_centered_text(draw, "MEET THE CARS", VIDEO_WIDTH // 2, VIEW_TOP + 44, get_font(64, title=True), fill=ACCENT_YELLOW)
         draw_centered_text(draw, "No engines. Only gravity, wheels & weight.", VIDEO_WIDTH // 2, VIEW_TOP + 118,
                            get_font(28, bold=True), fill=TEXT_MUTED)
-        row_h = 190
+        row_h = 150
         for ci, name in enumerate(cars):
-            y0 = VIEW_TOP + 170 + ci * row_h
+            y0 = VIEW_TOP + 160 + ci * row_h
             col = CAR_COLORS[ci]
-            draw.rounded_rectangle([90, y0, VIDEO_WIDTH - 90, y0 + row_h - 20], radius=20, fill=(26, 30, 52), outline=col, width=3)
+            draw.rounded_rectangle([90, y0, VIDEO_WIDTH - 90, y0 + row_h - 14], radius=20, fill=(26, 30, 52), outline=col, width=3)
             d = CAR_DESIGNS[name]
-            cx, cy = 230.0, y0 + 95.0
+            cx, cy = 230.0, y0 + 62.0
             wy = cy + d["ay"]
             draw_car(draw, ci, cx, cy, 0.0, [(cx - d["ax"], wy, 0.0), (cx + d["ax"], wy, 0.0)])
-            draw.text((400, y0 + 30), f"CAR {LABELS[ci]}: {name.upper()}", font=get_font(44, title=True), fill=TEXT_WHITE)
-            draw.text((400, y0 + 92), car_traits(name), font=get_font(26, bold=True), fill=col)
+            draw.text((400, y0 + 18), f"CAR {LABELS[ci]}: {name.upper()}", font=get_font(44, title=True), fill=TEXT_WHITE)
+            draw.text((400, y0 + 76), car_traits(name), font=get_font(26, bold=True), fill=col)
 
     def draw_frame(t_sec: float) -> Image.Image:
         rec = records[sim_index(remap(t_sec), SIM_HZ, len(records))]
@@ -337,6 +354,8 @@ def generate_downhill_derby_video(
         frame.paste(view, (0, VIEW_TOP))
         if t_sec < INTRO_SEC - 0.3:
             draw_lineup(frame)
+        if t_sec >= finish_video_t[winner_idx] + 1.6:
+            draw_series_card(frame, "Derby Series", series, "PTS", series_labels, series_colors, cars[winner_idx])
 
         draw = ImageDraw.Draw(frame)
         revealed = t_sec >= finish_video_t[winner_idx] + 0.3
@@ -373,9 +392,10 @@ def generate_downhill_derby_video(
         reveal_spoken=f"Car {LABELS[winner_idx]}, the {cars[winner_idx]}, wins the derby!",
         sfx_events=sfx,
         draw_frame=draw_frame,
-        series_badge="DOWNHILL DERBY",
+        series_badge=(f"DERBY FINALE · 3X POINTS" if series["is_finale"]
+                      else f"DERBY SERIES · RACE {series['game']}/10"),
         hook_title="WHICH CAR WINS THE DERBY?",
-        subtitle_line=f"4 Cars  •  0 Engines  •  Seed: {seed}",
+        subtitle_line=f"5 Cars  •  0 Engines  •  Seed: {seed}",
         footer_credit=f"Derby seed: {seed} • Physics: Pymunk 2D",
         wildcard=wildcard,
     )
@@ -389,7 +409,10 @@ def generate_downhill_derby_video(
         "winner_car": LABELS[winner_idx],
         "cars": cars,
         "finish_order": [f"{LABELS[i]}:{cars[i]}" for i in sim["full_order"]],
-        "series_short": "Downhill Derby",
+        "series_short": f"Derby {series['game']}/10",
+        "series_game": series["game"],
+        "series_finale": series["is_finale"],
+        "series_champion": series["champion"],
         "topic_short": "Derby",
         "reveal_timestamp_sec": REVEAL_START_SEC,
         "comment_question": (

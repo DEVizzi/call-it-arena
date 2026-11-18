@@ -207,12 +207,16 @@ def invoke_generator(
             allow_network=allow_network,
             wildcard=wildcard,
         )
+    # Physics series formats track 10-game series in state/series.json (only written when not a dry run)
     if format_name == "bucket_drop":
-        return generate_bucket_drop_video(seed=seed, output_dir=output_dir, wildcard=wildcard)
+        return generate_bucket_drop_video(seed=seed, output_dir=output_dir, wildcard=wildcard,
+                                          update_state=update_league_state)
     if format_name == "tower_quake":
-        return generate_tower_quake_video(seed=seed, output_dir=output_dir, wildcard=wildcard)
+        return generate_tower_quake_video(seed=seed, output_dir=output_dir, wildcard=wildcard,
+                                          update_state=update_league_state)
     if format_name == "downhill_derby":
-        return generate_downhill_derby_video(seed=seed, output_dir=output_dir, wildcard=wildcard)
+        return generate_downhill_derby_video(seed=seed, output_dir=output_dir, wildcard=wildcard,
+                                             update_state=update_league_state)
     raise ValueError(f"Unsupported format: {format_name}")
 
 

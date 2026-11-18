@@ -115,10 +115,10 @@ def test_downhill_derby_physics():
     from generators.downhill_derby import build_terrain, pick_cars, run_tuned_derby
 
     cars = pick_cars("20261118-A")
-    assert len(set(cars)) == 4
+    assert len(set(cars)) == 5 and cars == pick_cars("another-seed")  # fixed A–E line-up for the series
     sim = run_tuned_derby("20261118-A", cars, build_terrain("20261118-A"))
     assert sim["order"], "no car finished"
-    assert sorted(sim["full_order"]) == [0, 1, 2, 3]
+    assert sorted(sim["full_order"]) == [0, 1, 2, 3, 4]
 
 
 def test_new_formats_registered_everywhere():
@@ -134,3 +134,46 @@ def test_new_formats_registered_everywhere():
         assert fmt in FORMAT_MAIN_KEYWORDS and fmt in FORMAT_YT_TAGS and fmt in FORMAT_IG_HASHTAG_POOLS
         titles = build_title_candidates(fmt, {})
         assert len(titles) == 5 and all(len(t) <= 70 for _, t in titles)
+
+
+def test_grand_final_mega_arena_runs():
+    from generators.marble_arenas import MEGA_VARIANT
+    from generators.marble_league import MEGA_PACING
+
+    assert MEGA_VARIANT not in ARENA_VARIANTS  # reserved for race 28 only
+    sim = run_tuned_race("PREVIEW-GF", MEGA_VARIANT, LEAGUE_COUNTRY_CODES[:9], 30, MEGA_PACING)
+    assert len(sim.finish_order) >= 1
+    assert len(sim.frames) == int(MEGA_PACING.sim_until * 30)
+
+
+def test_grand_final_preview_mode_refuses_to_save():
+    from generators.marble_league import generate_marble_league_video
+
+    with pytest.raises(ValueError):
+        generate_marble_league_video("x", update_state=True, force_grand_final=True)
+
+
+def test_series_ten_games_with_triple_finale():
+    from common.series import FINALE_MULTIPLIER, SERIES_LENGTH, record_series_game
+
+    state = {}
+    keys = ["A", "B", "C"]
+    for g in range(1, SERIES_LENGTH + 1):
+        summary = record_series_game(state, "downhill_derby", {"A": 10, "B": 6}, "A", f"s{g}", all_keys=keys)
+        assert summary["game"] == g
+    assert summary["is_finale"] and summary["multiplier"] == FINALE_MULTIPLIER
+    assert summary["champion"] == "A"
+    assert summary["standings"][0] == ("A", 10 * (SERIES_LENGTH - 1) + 10 * FINALE_MULTIPLIER, SERIES_LENGTH)
+    fs = state["downhill_derby"]
+    assert fs["season"] == 2 and fs["game"] == 0 and fs["table"] == {}
+    assert fs["champions"][0]["champion"] == "A"
+
+
+def test_series_generators_refuse_to_save_in_preview_mode():
+    from generators.bucket_drop import generate_bucket_drop_video
+    from generators.downhill_derby import generate_downhill_derby_video
+    from generators.tower_quake import generate_tower_quake_video
+
+    for fn in (generate_bucket_drop_video, generate_tower_quake_video, generate_downhill_derby_video):
+        with pytest.raises(ValueError):
+            fn("x", update_state=True, force_game=10)
