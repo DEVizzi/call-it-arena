@@ -5,7 +5,9 @@ Call It Arena — Format 9: Downhill Derby (`generators/downhill_derby.py`).
 - Four gravity-powered Pymunk cars (picked from 5 designs: Monster Truck, Racer, Tank, Buggy, Mini)
   with real wheel joints roll down a long procedurally generated bumpy hill. No engines — pure physics,
   so wheel size, mass and wheelbase decide who flies, who flips and who wins.
-- Cars are "ghosts" (no car-to-car collisions) so every start is fair.
+- Cars are "ghosts" (no car-to-car collisions) so every start is fair, and each one is drawn in its own
+  coloured lane so they never overlap on screen.
+- A 3.5s "Meet the cars" lineup (wheel size, weight, wheelbase) opens the video so viewers can pick.
 - Scrolling camera follows the top two cars; a mini track map shows the whole field.
 - The first finish is time-remapped to land right after the reveal (slow-mo during the countdown).
 - Gravity is auto-tuned per seed so the race fills the timeline.
@@ -51,9 +53,10 @@ X_END = 8200.0
 VIEW_TOP, VIEW_BOTTOM = 380, 1340
 LABELS = ["A", "B", "C", "D"]
 CAR_COLORS = [ACCENT_RED, ACCENT_BLUE, ACCENT_GREEN, ACCENT_YELLOW]
+LANE_DY = 62.0  # vertical spacing between the visual lanes
 
 TOTAL_DURATION = 24.0
-INTRO_SEC = 2.0
+INTRO_SEC = 3.5  # "Meet the cars" lineup before the start
 COUNTDOWN_START_SEC = 15.5
 REVEAL_START_SEC = 18.5
 OUTRO_START_SEC = 22.2
@@ -224,11 +227,62 @@ def generate_downhill_derby_video(
 
     y_finish = _terrain_y(terrain, X_FINISH)
     cam = {"x": None, "y": None}
-    view_cx, view_cy = VIDEO_WIDTH / 2.0, 860.0
+    view_cx, view_cy = VIDEO_WIDTH / 2.0, 900.0
+    n_cars = len(cars)
+    lane_center = (n_cars - 1) / 2.0
+
+    def lane_dy(ci: int) -> float:
+        """Each car rides its own visual lane (identical physics hill), stacked so cars never overlap."""
+        return -ci * LANE_DY
 
     def camera_target(rec: List[Tuple[float, ...]]) -> Tuple[float, float]:
         xs = sorted(((r[0], r[1]) for r in rec), reverse=True)[:2]
-        return (sum(p[0] for p in xs) / len(xs) + 120.0, sum(p[1] for p in xs) / len(xs))
+        return (sum(p[0] for p in xs) / len(xs) + 120.0,
+                sum(p[1] for p in xs) / len(xs) - lane_center * LANE_DY)
+
+    def draw_car(vd: ImageDraw.ImageDraw, ci: int, cx: float, cy: float, ca: float,
+                 wheels: List[Tuple[float, float, float]], scale: float = 1.0) -> None:
+        d = CAR_DESIGNS[cars[ci]]
+        col = CAR_COLORS[ci]
+        hw, hh = d["w"] / 2.0 * scale, d["h"] / 2.0 * scale
+        pts = [(cx + p[0], cy + p[1]) for p in (rotate_point(q, ca) for q in ((-hw, -hh), (hw, -hh), (hw, hh), (-hw, hh)))]
+        vd.polygon(pts, fill=col, outline=TEXT_WHITE)
+        cab = [(cx + p[0], cy + p[1]) for p in (rotate_point(q, ca) for q in (
+            (-hw * 0.4, -hh), (hw * 0.25, -hh), (hw * 0.1, -hh - 16 * scale), (-hw * 0.3, -hh - 16 * scale)))]
+        vd.polygon(cab, fill=tuple(min(255, int(c * 0.6 + 90)) for c in col), outline=TEXT_WHITE)
+        draw_centered_text(vd, LABELS[ci], int(cx), int(cy - 12 * scale), get_font(int(22 * scale), bold=True), fill=BG_COLOR)
+        rr = d["r"] * scale
+        for wx, wy, wa in wheels:
+            vd.ellipse([wx - rr, wy - rr, wx + rr, wy + rr], fill=(30, 30, 36), outline=col, width=4)
+            vd.line([(wx, wy), (wx + math.cos(wa) * rr * 0.85, wy + math.sin(wa) * rr * 0.85)], fill=TEXT_WHITE, width=3)
+
+    def car_traits(name: str) -> str:
+        d = CAR_DESIGNS[name]
+        wheels = "Small" if d["r"] < 22 else ("Medium" if d["r"] < 30 else "Giant")
+        total = d["m"] + 2 * d["wm"]
+        weight = "Light" if total < 2.4 else ("Medium" if total < 3.5 else "Heavy")
+        base = "Short" if d["ax"] < 45 else "Long"
+        return f"{wheels} wheels  •  {weight}  •  {base} wheelbase"
+
+    def draw_lineup(frame: Image.Image) -> None:
+        """Pre-race 'Meet the cars' card so viewers can pick before the start."""
+        draw = ImageDraw.Draw(frame)
+        draw.rounded_rectangle([54, VIEW_TOP + 20, VIDEO_WIDTH - 54, VIEW_BOTTOM - 20], radius=32,
+                               fill=(18, 20, 36), outline=ACCENT_YELLOW, width=5)
+        draw_centered_text(draw, "MEET THE CARS", VIDEO_WIDTH // 2, VIEW_TOP + 44, get_font(64, title=True), fill=ACCENT_YELLOW)
+        draw_centered_text(draw, "No engines. Only gravity, wheels & weight.", VIDEO_WIDTH // 2, VIEW_TOP + 118,
+                           get_font(28, bold=True), fill=TEXT_MUTED)
+        row_h = 190
+        for ci, name in enumerate(cars):
+            y0 = VIEW_TOP + 170 + ci * row_h
+            col = CAR_COLORS[ci]
+            draw.rounded_rectangle([90, y0, VIDEO_WIDTH - 90, y0 + row_h - 20], radius=20, fill=(26, 30, 52), outline=col, width=3)
+            d = CAR_DESIGNS[name]
+            cx, cy = 230.0, y0 + 95.0
+            wy = cy + d["ay"]
+            draw_car(draw, ci, cx, cy, 0.0, [(cx - d["ax"], wy, 0.0), (cx + d["ax"], wy, 0.0)])
+            draw.text((400, y0 + 30), f"CAR {LABELS[ci]}: {name.upper()}", font=get_font(44, title=True), fill=TEXT_WHITE)
+            draw.text((400, y0 + 92), car_traits(name), font=get_font(26, bold=True), fill=col)
 
     def draw_frame(t_sec: float) -> Image.Image:
         rec = records[sim_index(remap(t_sec), SIM_HZ, len(records))]
@@ -248,48 +302,41 @@ def generate_downhill_derby_video(
         for k in range(-2, 6):
             mx = (k * 520.0 - cam["x"] * 0.25) % 3120.0 - 520.0
             vd.polygon([(mx, 700), (mx + 260, 300 + (k % 3) * 60), (mx + 520, 700)], fill=(26, 30, 52))
-        # terrain
+        # terrain: hill body + one coloured lane line per car (back lanes first)
         vis = [(x + ox, y + oy + vy) for x, y in terrain if -60 <= x + ox <= VIDEO_WIDTH + 60]
         if len(vis) >= 2:
-            poly = vis + [(vis[-1][0], 2000), (vis[0][0], 2000)]
+            top_lane = [(x, y + lane_dy(n_cars - 1)) for x, y in vis]
+            poly = top_lane + [(vis[-1][0], 2000), (vis[0][0], 2000)]
             vd.polygon(poly, fill=(40, 52, 84))
-            vd.line(vis, fill=(120, 200, 255), width=6)
-        # distance poles + finish
+            for ci in reversed(range(n_cars)):
+                lane = [(x, y + lane_dy(ci)) for x, y in vis]
+                vd.line(lane, fill=tuple(int(c * 0.75) for c in CAR_COLORS[ci]), width=5)
+        # distance poles + finish (span all lanes)
+        span = lane_dy(n_cars - 1)
         for mark in range(500, int(X_FINISH), 500):
             sx = mark + ox
             if -20 <= sx <= VIDEO_WIDTH + 20:
                 gy = _terrain_y(terrain, mark) + oy + vy
-                vd.line([(sx, gy), (sx, gy - 70)], fill=TEXT_MUTED, width=3)
-                vd.text((sx + 6, gy - 70), f"{mark // 10}m", font=get_font(22, bold=True), fill=TEXT_MUTED)
+                vd.line([(sx, gy), (sx, gy + span - 50)], fill=TEXT_MUTED, width=3)
+                vd.text((sx + 6, gy + span - 50), f"{mark // 10}m", font=get_font(22, bold=True), fill=TEXT_MUTED)
         fx = X_FINISH + ox
         if -40 <= fx <= VIDEO_WIDTH + 40:
             gy = y_finish + oy + vy
-            vd.line([(fx, gy), (fx, gy - 260)], fill=TEXT_WHITE, width=6)
+            vd.line([(fx, gy), (fx, gy + span - 230)], fill=TEXT_WHITE, width=6)
             for row in range(6):
                 for col in range(4):
                     c = TEXT_WHITE if (row + col) % 2 == 0 else (20, 20, 30)
-                    vd.rectangle([fx + col * 18, gy - 260 + row * 18, fx + col * 18 + 18, gy - 242 + row * 18], fill=c)
-        # cars (back-to-front so leader is on top)
-        order_now = sorted(range(len(rec)), key=lambda i: rec[i][0])
-        for ci in order_now:
-            d = CAR_DESIGNS[cars[ci]]
+                    top = gy + span - 230
+                    vd.rectangle([fx + col * 18, top + row * 18, fx + col * 18 + 18, top + 18 + row * 18], fill=c)
+        # cars: back lanes first so front lanes overlap naturally
+        for ci in reversed(range(n_cars)):
             r = rec[ci]
-            col = CAR_COLORS[ci]
-            cx, cy, ca = r[0] + ox, r[1] + oy + vy, r[2]
-            hw, hh = d["w"] / 2.0, d["h"] / 2.0
-            pts = [(cx + p[0], cy + p[1]) for p in (rotate_point(q, ca) for q in ((-hw, -hh), (hw, -hh), (hw, hh), (-hw, hh)))]
-            vd.polygon(pts, fill=col, outline=TEXT_WHITE)
-            # cabin bump
-            cab = [(cx + p[0], cy + p[1]) for p in (rotate_point(q, ca) for q in ((-hw * 0.4, -hh), (hw * 0.25, -hh), (hw * 0.1, -hh - 16), (-hw * 0.3, -hh - 16)))]
-            vd.polygon(cab, fill=tuple(min(255, int(c * 0.6 + 90)) for c in col), outline=TEXT_WHITE)
-            lb = rotate_point((0.0, 0.0), ca)
-            draw_centered_text(vd, LABELS[ci], int(cx + lb[0]), int(cy - 12), get_font(22, bold=True), fill=BG_COLOR)
-            for wi in (3, 6):
-                wx, wy, wa = r[wi] + ox, r[wi + 1] + oy + vy, r[wi + 2]
-                rr = d["r"]
-                vd.ellipse([wx - rr, wy - rr, wx + rr, wy + rr], fill=(30, 30, 36), outline=col, width=4)
-                vd.line([(wx, wy), (wx + math.cos(wa) * rr * 0.85, wy + math.sin(wa) * rr * 0.85)], fill=TEXT_WHITE, width=3)
+            dy = lane_dy(ci)
+            wheels = [(r[wi] + ox, r[wi + 1] + oy + vy + dy, r[wi + 2]) for wi in (3, 6)]
+            draw_car(vd, ci, r[0] + ox, r[1] + oy + vy + dy, r[2], wheels)
         frame.paste(view, (0, VIEW_TOP))
+        if t_sec < INTRO_SEC - 0.3:
+            draw_lineup(frame)
 
         draw = ImageDraw.Draw(frame)
         revealed = t_sec >= finish_video_t[winner_idx] + 0.3
