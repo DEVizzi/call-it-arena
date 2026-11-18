@@ -55,10 +55,10 @@ jobs:
       matrix:
         include:
           - { name: "tower-defence-meteor-shower", format: tower_quake, arena: meteor_shower, seed: "PREVIEW-TD1", finale: "" }
-          - { name: "tower-defence-wrecking-ball", format: tower_quake, arena: wrecking_ball, seed: "PREVIEW-TD2", finale: "" }
-          - { name: "tower-defence-hurricane", format: tower_quake, arena: hurricane, seed: "PREVIEW-TD3", finale: "" }
-          - { name: "tower-defence-bowling", format: tower_quake, arena: bowling, seed: "PREVIEW-TD4", finale: "" }
-          - { name: "tower-defence-tilt", format: tower_quake, arena: tilt, seed: "PREVIEW-TD5", finale: "" }
+          - { name: "tower-defence-cannon-barrage", format: tower_quake, arena: cannon_barrage, seed: "PREVIEW-TD7", finale: "" }
+          - { name: "tower-defence-bomb-blitz", format: tower_quake, arena: bombs, seed: "PREVIEW-TD8", finale: "" }
+          - { name: "tower-defence-ground-slam", format: tower_quake, arena: ground_slam, seed: "PREVIEW-TD9", finale: "" }
+          - { name: "tower-defence-earthquake", format: tower_quake, arena: earthquake, seed: "PREVIEW-TD10", finale: "" }
           - { name: "tower-defence-APOCALYPSE-FINALE", format: tower_quake, arena: auto, seed: "PREVIEW-TD6", finale: "--finale" }
     steps:
       - uses: actions/checkout@v4

@@ -110,9 +110,10 @@ def _twins() -> List[Block]:
 
 
 def _spire() -> List[Block]:
-    out: List[Block] = [(-48.0, 0.0, 46.0, 50.0), (0.0, 0.0, 46.0, 50.0), (48.0, 0.0, 46.0, 50.0),
-                        (-24.0, 50.0, 46.0, 50.0), (24.0, 50.0, 46.0, 50.0)]
-    out += [(0.0, 100.0 + i * 50.0, 44.0, 50.0) for i in range(6)]
+    # heavy 3-2 pyramid base + short thick column: low centre of gravity, small target
+    out: List[Block] = [(-49.0, 0.0, 48.0, 56.0), (0.0, 0.0, 48.0, 56.0), (49.0, 0.0, 48.0, 56.0),
+                        (-25.0, 56.0, 48.0, 56.0), (25.0, 56.0, 48.0, 56.0)]
+    out += [(0.0, 112.0 + i * 50.0, 52.0, 50.0) for i in range(5)]
     return out
 
 
@@ -145,7 +146,7 @@ SCENARIOS: Dict[str, Dict[str, str]] = {
     "cannon_barrage": {"label": "Cannon Barrage", "meter": "FIRE RATE", "spoken": "Cannons open fire from both sides!"},
     "bowling": {"label": "Bowling Strike", "meter": "BALL SPEED", "spoken": "Giant bowling balls roll in!"},
     "bombs": {"label": "Bomb Blitz", "meter": "BLAST POWER", "spoken": "Bombs are going off everywhere!"},
-    "apocalypse": {"label": "APOCALYPSE", "meter": "CHAOS", "spoken": "The finale: earthquake, meteors and a hurricane at once!"},
+    "apocalypse": {"label": "APOCALYPSE", "meter": "CHAOS", "spoken": "Apocalypse finale!"},
 }
 REGULAR_SCENARIOS = [k for k in SCENARIOS if k != "apocalypse"]
 FINALE_SCENARIO = "apocalypse"
@@ -244,7 +245,8 @@ def simulate_defence(seed: str, designs: List[str], scenario: str, power: float,
         ws.elasticity = 0.2
         space.add(wrecker, ws)
 
-    projectiles: List[Tuple[pymunk.Body, float, str]] = []
+    projectiles: List[Tuple[pymunk.Body, float, str, float]] = []
+    lifetime = {"meteor": 2.2, "cannon": 3.5, "bowl": 6.0}
     blasts: List[Tuple[float, float, float, float]] = []
     spawn_acc = {"meteor": 0.0, "cannon": 0.0, "bowl": 0.0, "bomb": 0.0}
     side = {"cannon": 1.0, "bowl": 1.0}
@@ -290,7 +292,7 @@ def simulate_defence(seed: str, designs: List[str], scenario: str, power: float,
                 r = rng.uniform(12.0, 25.0)
                 b = _ball(space, (rng.uniform(60.0, 1020.0), 300.0), (rng.uniform(-80.0, 80.0), rng.uniform(380.0, 650.0)),
                           r, r * r / 55.0, 0.2)
-                projectiles.append((b, r, "meteor"))
+                projectiles.append((b, r, "meteor", t))
         # --- cannons
         if "cannon_barrage" in parts and spawning:
             spawn_acc["cannon"] += dt * (0.35 + 0.11 * e)
@@ -300,7 +302,7 @@ def simulate_defence(seed: str, designs: List[str], scenario: str, power: float,
                 sx = -40.0 if side["cannon"] > 0 else 1120.0
                 y = rng.uniform(GROUND_Y - 430.0, GROUND_Y - 60.0)
                 b = _ball(space, (sx, y), (side["cannon"] * rng.uniform(850.0, 1150.0), rng.uniform(-160.0, -60.0)), 15.0, 6.0)
-                projectiles.append((b, 15.0, "cannon"))
+                projectiles.append((b, 15.0, "cannon", t))
         # --- bowling balls
         if "bowling" in parts and spawning:
             spawn_acc["bowl"] += dt * (0.28 + 0.05 * e)
@@ -309,7 +311,7 @@ def simulate_defence(seed: str, designs: List[str], scenario: str, power: float,
                 side["bowl"] *= -1.0
                 sx = -60.0 if side["bowl"] > 0 else 1140.0  # rolls in from off-screen onto the plate
                 b = _ball(space, (sx, plate.position.y - 12.0 - 40.0), (side["bowl"] * (420.0 + 22.0 * e), 0.0), 38.0, 22.0, 0.1)
-                projectiles.append((b, 38.0, "bowl"))
+                projectiles.append((b, 38.0, "bowl", t))
         # --- bombs
         if "bombs" in parts and spawning:
             spawn_acc["bomb"] += dt / max(0.55, 2.2 - 0.07 * e)
@@ -356,7 +358,7 @@ def simulate_defence(seed: str, designs: List[str], scenario: str, power: float,
             "plate": (float(plate.position.x), float(plate.position.y), float(plate.angle)),
             "blocks": [[(float(b["body"].position.x), float(b["body"].position.y), float(b["body"].angle))
                         for b in tw["blocks"]] for tw in towers],
-            "proj": [(float(b.position.x), float(b.position.y), r, kind) for b, r, kind in projectiles],
+            "proj": [(float(b.position.x), float(b.position.y), r, kind, t - born) for b, r, kind, born in projectiles],
             "wreck": (float(wrecker.position.x), float(wrecker.position.y)) if wrecker is not None else None,
             "level": level,
         })
@@ -366,11 +368,12 @@ def simulate_defence(seed: str, designs: List[str], scenario: str, power: float,
 
         # projectile cleanup
         keep = []
-        for b, r, kind in projectiles:
-            if b.position.y > FLOOR_Y + 220 or not (-400.0 < b.position.x < 1480.0):
+        for b, r, kind, born in projectiles:
+            expired = (t - born) > lifetime[kind]  # meteors burn out so they never bury the towers
+            if expired or b.position.y > FLOOR_Y + 220 or not (-400.0 < b.position.x < 1480.0):
                 space.remove(b, *b.shapes)
             else:
-                keep.append((b, r, kind))
+                keep.append((b, r, kind, born))
         projectiles = keep
 
         # collapse detection (height relative to the local plate surface under each tower)
@@ -519,7 +522,9 @@ def generate_tower_quake_video(
                 draw_centered_text(draw, f"OUT #{out_rank.get(ti, n)}", int(lx), 700, get_font(36, title=True), fill=ACCENT_RED)
 
         # projectiles / wrecking ball / blasts
-        for (qx, qy, r, kind) in rec["proj"]:
+        for (qx, qy, r, kind, age) in rec["proj"]:
+            if kind == "meteor" and age > 1.8:
+                r *= max(0.15, (2.2 - age) / 0.4)  # burning out
             if kind == "meteor":
                 draw.polygon([(qx - r * 0.8, qy - r * 0.2), (qx + r * 0.8, qy - r * 0.2), (qx, qy - r * 3.2)], fill=(255, 120, 30))
                 draw.ellipse([qx - r, qy - r, qx + r, qy + r], fill=(255, 170, 60), outline=(255, 230, 150), width=2)
@@ -585,7 +590,7 @@ def generate_tower_quake_video(
         countdown_start_sec=COUNTDOWN_START_SEC,
         reveal_start_sec=REVEAL_START_SEC,
         outro_start_sec=OUTRO_START_SEC,
-        hook_spoken=f"{sc['spoken']} Six towers, which one stands last?",
+        hook_spoken=f"{sc['spoken']} Which tower stands last?",
         reveal_spoken=f"The {winner_design} is the last tower standing!",
         sfx_events=sfx,
         draw_frame=draw_frame,
