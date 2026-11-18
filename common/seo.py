@@ -42,6 +42,9 @@ FORMAT_MAIN_KEYWORDS: Dict[str, str] = {
     "space_guess": "Space Quiz",
     "sorting_race": "Sorting Race",
     "guess_the_year": "History Quiz",
+    "bucket_drop": "Plinko",
+    "tower_quake": "Earthquake",
+    "downhill_derby": "Car Race",
 }
 
 FORMAT_YT_NICHE_HASHTAGS: Dict[str, Tuple[str, str]] = {
@@ -51,6 +54,9 @@ FORMAT_YT_NICHE_HASHTAGS: Dict[str, Tuple[str, str]] = {
     "space_guess": ("#spacequiz", "#astronomy"),
     "sorting_race": ("#sortingalgorithms", "#coding"),
     "guess_the_year": ("#historyquiz", "#guesstheyear"),
+    "bucket_drop": ("#plinko", "#satisfying"),
+    "tower_quake": ("#earthquake", "#physics"),
+    "downhill_derby": ("#carrace", "#physicssimulation"),
 }
 
 FORMAT_YT_TAGS: Dict[str, List[str]] = {
@@ -84,6 +90,21 @@ FORMAT_YT_TAGS: Dict[str, List[str]] = {
         "world history", "time travel quiz", "vintage history", "call it arena",
         "history challenge", "trivia game", "educational quiz", "what year",
     ],
+    "bucket_drop": [
+        "plinko", "plinko ball drop", "satisfying physics", "ball drop challenge",
+        "guess the bucket", "physics simulation", "pymunk physics", "call it arena",
+        "marble drop", "luck game", "oddly satisfying", "prediction game",
+    ],
+    "tower_quake": [
+        "earthquake simulation", "tower collapse", "which tower survives", "physics simulation",
+        "earthquake test", "block tower", "satisfying destruction", "call it arena",
+        "engineering challenge", "jenga physics", "structural test", "prediction game",
+    ],
+    "downhill_derby": [
+        "car race", "downhill race", "physics cars", "gravity race",
+        "which car wins", "physics simulation", "car design challenge", "call it arena",
+        "monster truck race", "satisfying race", "prediction game", "pymunk physics",
+    ],
 }
 
 FORMAT_IG_HASHTAG_POOLS: Dict[str, List[str]] = {
@@ -110,6 +131,18 @@ FORMAT_IG_HASHTAG_POOLS: Dict[str, List[str]] = {
     "guess_the_year": [
         "#historyquiz", "#guesstheyear", "#onthisday", "#historyfacts",
         "#triviachallenge", "#worldhistory", "#callitarena", "#quizreels",
+    ],
+    "bucket_drop": [
+        "#plinko", "#satisfyingvideos", "#physicssimulation", "#balldrop",
+        "#oddlysatisfying", "#guessinggame", "#callitarena", "#luckgame",
+    ],
+    "tower_quake": [
+        "#earthquake", "#physicssimulation", "#towercollapse", "#satisfyingvideos",
+        "#engineering", "#destruction", "#callitarena", "#guessinggame",
+    ],
+    "downhill_derby": [
+        "#carrace", "#physicssimulation", "#downhill", "#satisfyingvideos",
+        "#monstertruck", "#racing", "#callitarena", "#guessinggame",
     ],
 }
 
@@ -229,6 +262,31 @@ def build_title_candidates(
             ("pattern_algo_sound", f"Wait For The Final Sweep! 🔊 {algo_a} {kw}"),
             ("pattern_algo_pick", f"Call The Winner: {algo_a} or {algo_b}? 🏆 {kw}"),
             ("pattern_algo_speed", f"Which Algorithm Sorts Fastest? 🚀 {kw}"),
+        ]
+    elif format_name == "bucket_drop":
+        raw = [
+            ("pattern_bucket_pick", f"Which Bucket Will It Hit? 🎯 1 to 7 {kw} Drop"),
+            ("pattern_bucket_only", f"Only 1 in 7 Call This {kw} Bucket! 🟡"),
+            ("pattern_bucket_wait", f"Wait For The Final Bounce! 😱 {kw} Drop"),
+            ("pattern_bucket_can", f"Can You Predict This {kw} Ball? 🔮"),
+            ("pattern_bucket_lock", f"Lock Your Bucket Before It Lands! ⏳ {kw}"),
+        ]
+    elif format_name == "tower_quake":
+        raw = [
+            ("pattern_quake_which", f"Which Tower Survives The {kw}? 🏗️"),
+            ("pattern_quake_can", f"Can Any Tower Survive This {kw}? 😱"),
+            ("pattern_quake_only", f"Only One Tower Survives The {kw}! 🏆"),
+            ("pattern_quake_guess", f"Guess The Last Tower Standing! 🌋 {kw} Test"),
+            ("pattern_quake_wait", f"Wait For The Final Collapse! 💥 {kw} Test"),
+        ]
+    elif format_name == "downhill_derby":
+        cars_ctx = context.get("cars") or ["Monster Truck"]
+        raw = [
+            ("pattern_derby_which", f"Who Wins This {kw}? No Engines, Just Gravity! 🏁"),
+            ("pattern_derby_can", f"Can The {cars_ctx[0]} Win This {kw}? 🚙"),
+            ("pattern_derby_guess", f"Guess The Downhill {kw} Winner! 🏎️"),
+            ("pattern_derby_wait", f"Wait For The Photo Finish! 😱 Gravity {kw}"),
+            ("pattern_derby_only", f"Only Physics Decides This {kw}! ⚙️"),
         ]
     else:  # guess_the_year
         raw = [

@@ -25,6 +25,9 @@ format_weights:
   space_guess: 0.1
   sorting_race: 0.1
   guess_the_year: 0.1
+  bucket_drop: 0.1
+  tower_quake: 0.1
+  downhill_derby: 0.1
 playlists:
   marble_league: Marble League Season 1
   flag_quiz: Guess The Flag Quiz
@@ -32,3 +35,6 @@ playlists:
   space_guess: Deep Space Mystery (NASA)
   sorting_race: Algorithm Sorting Race
   guess_the_year: Guess The Year History Quiz
+  bucket_drop: Plinko Bucket Drop
+  tower_quake: Earthquake Tower Survival
+  downhill_derby: Downhill Derby (Physics Cars)

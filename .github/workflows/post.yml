@@ -22,6 +22,9 @@ on:
           - space_guess
           - sorting_race
           - guess_the_year
+          - bucket_drop
+          - tower_quake
+          - downhill_derby
       dry_run:
         description: "Dry run (generate & validate MP4 artifact without live uploading)"
         required: true

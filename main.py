@@ -39,12 +39,16 @@ from common.seo import generate_seo_package, redact_secrets
 from common.upload_instagram import upload_to_instagram_reels
 from common.upload_youtube import authenticate_youtube, upload_to_youtube_shorts
 from common.validate import ValidationResult, validate_video_package
+from generators.bucket_drop import generate_bucket_drop_video
 from generators.data_guess import generate_data_guess_video
+from generators.downhill_derby import generate_downhill_derby_video
 from generators.flag_quiz import generate_flag_quiz_video
 from generators.guess_the_year import generate_guess_the_year_video
+from generators.marble_arenas import ARENA_VARIANTS
 from generators.marble_league import generate_marble_league_video
 from generators.sorting_race import generate_sorting_race_video
 from generators.space_guess import generate_space_guess_video
+from generators.tower_quake import generate_tower_quake_video
 
 logging.basicConfig(
     level=logging.INFO,
@@ -61,6 +65,9 @@ ROTATING_GUESS_FORMATS = [
     "space_guess",
     "sorting_race",
     "guess_the_year",
+    "bucket_drop",
+    "tower_quake",
+    "downhill_derby",
 ]
 
 ALL_FORMATS = ["marble_league"] + ROTATING_GUESS_FORMATS
@@ -154,6 +161,7 @@ def invoke_generator(
     weekly_recap: bool = False,
     allow_network: bool = True,
     update_league_state: bool = True,
+    arena_variant: Optional[str] = None,
 ) -> Dict[str, Any]:
     used_items = posted_state.get("used_quiz_items", [])
     if format_name == "marble_league":
@@ -163,6 +171,7 @@ def invoke_generator(
             wildcard=wildcard,
             weekly_recap=weekly_recap,
             update_state=update_league_state,
+            variant_override=arena_variant,
         )
     if format_name == "flag_quiz":
         return generate_flag_quiz_video(
@@ -198,6 +207,12 @@ def invoke_generator(
             allow_network=allow_network,
             wildcard=wildcard,
         )
+    if format_name == "bucket_drop":
+        return generate_bucket_drop_video(seed=seed, output_dir=output_dir, wildcard=wildcard)
+    if format_name == "tower_quake":
+        return generate_tower_quake_video(seed=seed, output_dir=output_dir, wildcard=wildcard)
+    if format_name == "downhill_derby":
+        return generate_downhill_derby_video(seed=seed, output_dir=output_dir, wildcard=wildcard)
     raise ValueError(f"Unsupported format: {format_name}")
 
 
@@ -267,6 +282,7 @@ def run_pipeline(
     custom_seed: Optional[str] = None,
     dry_run: bool = False,
     weekly_analytics: bool = False,
+    arena_variant: Optional[str] = None,
 ) -> Dict[str, Any]:
     """
     Executes the end-to-end Call It Arena pipeline:
@@ -277,6 +293,9 @@ def run_pipeline(
     5. Generates SEO metadata, 5-title scoring, and 4-language localizations.
     6. Uploads independently to YouTube Shorts and Instagram Reels (unless `dry_run=True`),
        queuing any failed platform in `state/posted.json` for the next run.
+
+    Dry runs never mutate `state/league.json` or `state/posted.json`, so they are safe to run while a
+    live league season is in progress.
     """
     ensure_flag_assets()
     ensure_audio_assets()
@@ -333,7 +352,8 @@ def run_pipeline(
                 wildcard=wildcard,
                 weekly_recap=is_weekly_recap and attempt_fmt == "marble_league",
                 allow_network=True,
-                update_league_state=True,
+                update_league_state=not dry_run,
+                arena_variant=arena_variant,
             )
             video_path = Path(gen_meta["video_path"])
             validation = validate_video_package(video_path, gen_meta)
@@ -446,7 +466,8 @@ def run_pipeline(
     if not dry_run:
         posted_state.setdefault("posts", []).append(post_record)
 
-    save_posted_state(posted_state)
+    if not dry_run:
+        save_posted_state(posted_state)
 
     if is_weekly_recap and not dry_run:
         run_weekly_analytics_and_rebalance(allow_network=True)
@@ -471,6 +492,12 @@ def main() -> int:
     parser.add_argument("--seed", type=str, default=None, help="Explicit deterministic seed (e.g. 20261115-B)")
     parser.add_argument("--dry-run", action="store_true", help="Generate and validate MP4 locally without uploading")
     parser.add_argument("--weekly-analytics", action="store_true", help="Run Sunday weekly analytics & rebalance")
+    parser.add_argument(
+        "--arena",
+        choices=ARENA_VARIANTS,
+        default=None,
+        help="Force a specific Marble League arena (testing); default = automatic no-repeat rotation",
+    )
     args = parser.parse_args()
 
     result = run_pipeline(
@@ -479,6 +506,7 @@ def main() -> int:
         custom_seed=args.seed,
         dry_run=args.dry_run,
         weekly_analytics=args.weekly_analytics,
+        arena_variant=args.arena,
     )
     print(json.dumps(result, indent=2, ensure_ascii=False, default=str))
     return 0

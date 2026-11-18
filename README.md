@@ -12,12 +12,20 @@ Every video follows the high-retention **Call It Arena** structure:
 
 | Format | Share | Generator | Description |
 | :--- | :---: | :--- | :--- |
-| **1. Country Marble League** *(Flagship)* | ~50% (Slot B) | `generators/marble_league.py` | 16-country headless `Pygame` + `Pymunk` physics simulation inside rotating neon rings (`single_ring`, `double_ring`, `spiral_labyrinth`, `funnel_obstacles`). Tracks a 4-week season in `state/league.json` (Group Stage → Knockouts → Monthly Grand Final) and ends with Top 5 Standings + `"🇮🇳 India: #X"` spotlight + tomorrow's cliffhanger. |
+| **1. Country Marble League** *(Flagship)* | ~50% (Slot B) | `generators/marble_league.py` + `generators/marble_arenas.py` | 16-country headless `Pygame` + `Pymunk` physics race across **14 arenas** — escape arenas (`single_ring`, `double_ring`, `spiral_labyrinth`, `funnel_obstacles`, `triple_ring`, `hexagon_spin`, `square_crusher`, `gear_ring`, `gravity_well`) and drop races to a finish line (`plinko_drop`, `zigzag_ramps`, `windmill_drop`, `hourglass_rush`, `pendulum_gauntlet`). An arena is never reused within 9 races, and physics pacing is auto-tuned per race. **Country names stay hidden during the race** (anonymous `ESCAPED 3/12` counter) and are revealed at the end: race result table (position, time, points) → season standings so far + India spotlight + cliffhanger. Tracks a 4-week season in `state/league.json`. |
 | **2. Flag Quiz** | ~10% (Slot A) | `generators/flag_quiz.py` | Heavily pixelated/blurred flag (`Pillow`) that sharpens across 5 stages with 2 geographic clues, 4 options (`A–D`), countdown, and a fun fact reveal. |
 | **3. World Data Bar Race** | ~10% (Slot A) | `generators/data_guess.py` | Animated horizontal bar chart race (`Matplotlib` `Agg` piped to `FFmpeg`) using World Bank / Our World in Data metrics. Hides the #1 country name until the reveal. |
 | **4. Deep Space Mystery** | ~10% (Slot A) | `generators/space_guess.py` | NASA APOD API slow `zoompan` reveal (`"Galaxy, Nebula, Planet, or Star Cluster?"`). Strictly skips `media_type == "video"` and any entry with a `copyright` field. |
 | **5. Algorithm Sorting Race** | ~10% (Slot A) | `generators/sorting_race.py` | Side-by-side split-screen race of two sorting algorithms (`QuickSort`, `MergeSort`, `HeapSort`, `ShellSort`) on identical scrambled arrays with pitched synthesizer ticks. |
 | **6. Guess The Year** | ~10% (Slot A) | `generators/guess_the_year.py` | Wikipedia `"On this day"` API + license-checked Wikimedia Commons image (`CC0`, `Public domain`, `CC BY`, `CC BY-SA`), masking the year (`[ ???? ]`) until the reveal. |
+| **7. Plinko Bucket Drop** | ~10% (Slot A) | `generators/bucket_drop.py` | A golden ball falls down a tall scrolling `Pymunk` Plinko tower (pegs, bumpers, spinners) into 7 numbered buckets. Lands in slow motion right after the countdown. |
+| **8. Earthquake Tower Survival** | ~10% (Slot A) | `generators/tower_quake.py` | Three rigid-body block towers (6 designs) on a shaking plate with a rising magnitude meter — which one is the last tower standing? |
+| **9. Downhill Derby** | ~10% (Slot A) | `generators/downhill_derby.py` | Four engine-less jointed physics cars (5 designs) roll down a procedural bumpy hill with jumps; scrolling camera + mini track map. |
+
+All physics formats share `common/physics_kit.py` (declarative arena geometry, kinematic drivers, time remapping so the decisive moment lands just after the 3-2-1 reveal) and `common/physics_video.py` (TTS + audio + HUD + FFmpeg).
+
+> [!TIP]
+> Safe local testing during a live season: `python main.py --format marble_league --arena plinko_drop --dry-run` — dry runs never write `state/league.json` or `state/posted.json`.
 
 ---
 
@@ -66,7 +74,7 @@ A browser window will open to authorize your YouTube channel with `youtube.uploa
 
 All timing and format distribution weights live in [`schedule.yaml`](schedule.yaml) so you never need to touch Python code to rebalance:
 
-- **Slot A (`02:07 UTC` = `07:37 IST`)**: Catches US evening prime time (`~9 PM ET / 6 PM PT`) + India morning commute. Runs a weighted choice from Formats 2–6.
+- **Slot A (`02:07 UTC` = `07:37 IST`)**: Catches US evening prime time (`~9 PM ET / 6 PM PT`) + India morning commute. Runs a weighted choice from Formats 2–9.
 - **Slot B (`14:07 UTC` = `19:37 IST`)**: Catches India prime time + Europe afternoon. Runs **Country Marble League** (and **Weekly Standings + Mega Quiz** on Sundays).
 - **Automated Sunday Analytics Rebalancer**: Every Sunday, `common/analytics.py` writes `reports/weekly-YYYY-MM-DD.md` and automatically reduces the weight of any format averaging `< 50%` of channel views for 3 weeks in a row, while boosting formats `> 2x` average (capped at `70%` max share).
 
@@ -115,3 +123,6 @@ All timing and format distribution weights live in [`schedule.yaml`](schedule.ya
     - `Deep Space Mystery (NASA)`
     - `Algorithm Sorting Race`
     - `Guess The Year History Quiz`
+    - `Plinko Bucket Drop`
+    - `Earthquake Tower Survival`
+    - `Downhill Derby (Physics Cars)`
