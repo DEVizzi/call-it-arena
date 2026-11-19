@@ -1,6 +1,6 @@
 {
   "season": 1,
-  "race_number": 8,
+  "race_number": 9,
   "max_races_per_season": 28,
   "stage": "Group Stage",
   "countries": {
@@ -8,18 +8,18 @@
       "code": "IN",
       "name": "India",
       "emoji": "🇮🇳",
-      "points": 20,
-      "wins": 2,
-      "podiums": 2,
+      "points": 30,
+      "wins": 3,
+      "podiums": 3,
       "eliminated": false
     },
     "US": {
       "code": "US",
       "name": "USA",
       "emoji": "🇺🇸",
-      "points": 8,
+      "points": 15,
       "wins": 0,
-      "podiums": 1,
+      "podiums": 2,
       "eliminated": false
     },
     "BR": {
@@ -35,7 +35,7 @@
       "code": "ID",
       "name": "Indonesia",
       "emoji": "🇮🇩",
-      "points": 18,
+      "points": 19,
       "wins": 1,
       "podiums": 2,
       "eliminated": false
@@ -98,7 +98,7 @@
       "code": "DE",
       "name": "Germany",
       "emoji": "🇩🇪",
-      "points": 13,
+      "points": 16,
       "wins": 0,
       "podiums": 1,
       "eliminated": false
@@ -116,9 +116,9 @@
       "code": "TR",
       "name": "Turkey",
       "emoji": "🇹🇷",
-      "points": 15,
+      "points": 20,
       "wins": 1,
-      "podiums": 2,
+      "podiums": 3,
       "eliminated": false
     },
     "EG": {
@@ -283,6 +283,34 @@
         "ID",
         "PK",
         "CA"
+      ],
+      "points_multiplier": 1
+    },
+    {
+      "season": 1,
+      "race": 9,
+      "seed": "20261119-B",
+      "variant": "windmill_drop",
+      "winner": "IN",
+      "podium": [
+        "IN",
+        "US",
+        "TR"
+      ],
+      "eliminated": null,
+      "finish_order": [
+        "IN",
+        "US",
+        "TR",
+        "DE",
+        "ID",
+        "GB",
+        "JP",
+        "BR",
+        "BD",
+        "MX",
+        "EG",
+        "PH"
       ],
       "points_multiplier": 1
     }
