@@ -1,6 +1,6 @@
 {
   "season": 1,
-  "race_number": 9,
+  "race_number": 10,
   "max_races_per_season": 28,
   "stage": "Group Stage",
   "countries": {
@@ -17,7 +17,7 @@
       "code": "US",
       "name": "USA",
       "emoji": "🇺🇸",
-      "points": 15,
+      "points": 18,
       "wins": 0,
       "podiums": 2,
       "eliminated": false
@@ -26,18 +26,18 @@
       "code": "BR",
       "name": "Brazil",
       "emoji": "🇧🇷",
-      "points": 32,
-      "wins": 1,
-      "podiums": 4,
+      "points": 42,
+      "wins": 2,
+      "podiums": 5,
       "eliminated": false
     },
     "ID": {
       "code": "ID",
       "name": "Indonesia",
       "emoji": "🇮🇩",
-      "points": 19,
+      "points": 24,
       "wins": 1,
-      "podiums": 2,
+      "podiums": 3,
       "eliminated": false
     },
     "PH": {
@@ -62,7 +62,7 @@
       "code": "BD",
       "name": "Bangladesh",
       "emoji": "🇧🇩",
-      "points": 28,
+      "points": 29,
       "wins": 2,
       "podiums": 3,
       "eliminated": false
@@ -89,9 +89,9 @@
       "code": "GB",
       "name": "UK",
       "emoji": "🇬🇧",
-      "points": 5,
+      "points": 12,
       "wins": 0,
-      "podiums": 1,
+      "podiums": 2,
       "eliminated": false
     },
     "DE": {
@@ -311,6 +311,32 @@
         "MX",
         "EG",
         "PH"
+      ],
+      "points_multiplier": 1
+    },
+    {
+      "season": 1,
+      "race": 10,
+      "seed": "20261119-B-2",
+      "variant": "pendulum_gauntlet",
+      "winner": "BR",
+      "podium": [
+        "BR",
+        "GB",
+        "ID"
+      ],
+      "eliminated": null,
+      "finish_order": [
+        "BR",
+        "GB",
+        "ID",
+        "US",
+        "BD",
+        "NG",
+        "VN",
+        "EG",
+        "CA",
+        "IN"
       ],
       "points_multiplier": 1
     }
