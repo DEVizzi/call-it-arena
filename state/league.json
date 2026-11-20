@@ -1,6 +1,6 @@
 {
   "season": 1,
-  "race_number": 10,
+  "race_number": 11,
   "max_races_per_season": 28,
   "stage": "Group Stage",
   "countries": {
@@ -17,7 +17,7 @@
       "code": "US",
       "name": "USA",
       "emoji": "🇺🇸",
-      "points": 18,
+      "points": 19,
       "wins": 0,
       "podiums": 2,
       "eliminated": false
@@ -26,7 +26,7 @@
       "code": "BR",
       "name": "Brazil",
       "emoji": "🇧🇷",
-      "points": 42,
+      "points": 45,
       "wins": 2,
       "podiums": 5,
       "eliminated": false
@@ -44,9 +44,9 @@
       "code": "PH",
       "name": "Philippines",
       "emoji": "🇵🇭",
-      "points": 14,
-      "wins": 0,
-      "podiums": 2,
+      "points": 24,
+      "wins": 1,
+      "podiums": 3,
       "eliminated": false
     },
     "PK": {
@@ -62,9 +62,9 @@
       "code": "BD",
       "name": "Bangladesh",
       "emoji": "🇧🇩",
-      "points": 29,
+      "points": 36,
       "wins": 2,
-      "podiums": 3,
+      "podiums": 4,
       "eliminated": false
     },
     "NG": {
@@ -116,9 +116,9 @@
       "code": "TR",
       "name": "Turkey",
       "emoji": "🇹🇷",
-      "points": 20,
+      "points": 25,
       "wins": 1,
-      "podiums": 3,
+      "podiums": 4,
       "eliminated": false
     },
     "EG": {
@@ -337,6 +337,38 @@
         "EG",
         "CA",
         "IN"
+      ],
+      "points_multiplier": 1
+    },
+    {
+      "season": 1,
+      "race": 11,
+      "seed": "20261120-B",
+      "variant": "hourglass_rush",
+      "winner": "PH",
+      "podium": [
+        "PH",
+        "BD",
+        "TR"
+      ],
+      "eliminated": null,
+      "finish_order": [
+        "PH",
+        "BD",
+        "TR",
+        "BR",
+        "US",
+        "MX",
+        "IN",
+        "NG",
+        "GB",
+        "CA",
+        "ID",
+        "DE",
+        "JP",
+        "VN",
+        "PK",
+        "EG"
       ],
       "points_multiplier": 1
     }
