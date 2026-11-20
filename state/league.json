@@ -1,6 +1,6 @@
 {
   "season": 1,
-  "race_number": 11,
+  "race_number": 12,
   "max_races_per_season": 28,
   "stage": "Group Stage",
   "countries": {
@@ -8,9 +8,9 @@
       "code": "IN",
       "name": "India",
       "emoji": "🇮🇳",
-      "points": 30,
-      "wins": 3,
-      "podiums": 3,
+      "points": 40,
+      "wins": 4,
+      "podiums": 4,
       "eliminated": false
     },
     "US": {
@@ -35,9 +35,9 @@
       "code": "ID",
       "name": "Indonesia",
       "emoji": "🇮🇩",
-      "points": 24,
+      "points": 31,
       "wins": 1,
-      "podiums": 3,
+      "podiums": 4,
       "eliminated": false
     },
     "PH": {
@@ -80,7 +80,7 @@
       "code": "MX",
       "name": "Mexico",
       "emoji": "🇲🇽",
-      "points": 4,
+      "points": 7,
       "wins": 0,
       "podiums": 0,
       "eliminated": false
@@ -116,7 +116,7 @@
       "code": "TR",
       "name": "Turkey",
       "emoji": "🇹🇷",
-      "points": 25,
+      "points": 26,
       "wins": 1,
       "podiums": 4,
       "eliminated": false
@@ -134,9 +134,9 @@
       "code": "VN",
       "name": "Vietnam",
       "emoji": "🇻🇳",
-      "points": 5,
+      "points": 10,
       "wins": 0,
-      "podiums": 0,
+      "podiums": 1,
       "eliminated": false
     },
     "CA": {
@@ -369,6 +369,32 @@
         "VN",
         "PK",
         "EG"
+      ],
+      "points_multiplier": 1
+    },
+    {
+      "season": 1,
+      "race": 12,
+      "seed": "20261120-B-2",
+      "variant": "funnel_obstacles",
+      "winner": "IN",
+      "podium": [
+        "IN",
+        "ID",
+        "VN"
+      ],
+      "eliminated": null,
+      "finish_order": [
+        "IN",
+        "ID",
+        "VN",
+        "MX",
+        "TR",
+        "CA",
+        "US",
+        "GB",
+        "NG",
+        "BR"
       ],
       "points_multiplier": 1
     }
