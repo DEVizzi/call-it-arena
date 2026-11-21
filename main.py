@@ -511,13 +511,18 @@ def run_season_recap(
     dry_run: bool = False,
     preview_so_far: bool = False,
     stills_dir: Optional[Path] = None,
+    recap_kind: str = "auto",
+    start_race: Optional[int] = None,
+    end_race: Optional[int] = None,
 ) -> Dict[str, Any]:
     """
-    Renders (and when live, uploads) the long-form 16:9 Marble League season recap.
-    - Default: picks the latest COMPLETED season whose recap has not been posted yet; no-op otherwise.
-    - `preview_so_far=True`: renders the current in-progress season (always treated as a dry run).
+    Renders (and when live, uploads) the long-form 16:9 Marble League recap:
+    - Default (`recap_kind="auto"`, `season=None`): checks `pick_next_due_recap` for the next milestone
+      (`Part 1` after Race 10, `Part 2` after Race 20, `Part 3` Finale after Race 28, `Full Season` 18h+ later).
+    - `preview_so_far=True`: renders the current in-progress season so far (always treated as a dry run).
     Never writes `state/league.json`; only `state/posted.json` (recap record + quota) on a live upload.
     """
+    from common.recap_schedule import pick_next_due_recap
     from common.upload_youtube import upload_long_video
     from generators.marble_league import load_league_state
     from generators.season_recap import generate_season_recap_video
@@ -527,50 +532,131 @@ def run_season_recap(
     league = load_league_state()
     posted_state = load_posted_state()
     done = posted_state.setdefault("season_recaps", {})
+    max_races = int(league.get("max_races_per_season", 28))
+
+    recap_key: Optional[str] = None
+    eff_start = start_race
+    eff_end = end_race
+    eff_kind = recap_kind
 
     if preview_so_far:
         dry_run = True
         season = int(season or league.get("season", 1))
-    elif season is None:
-        completed = sorted({int(c["season"]) for c in league.get("past_champions", [])})
-        pending = [s for s in completed if str(s) not in done]
-        if not pending:
-            logger.info("No completed season is waiting for a recap. Nothing to do.")
-            return {"skipped": "no completed season pending"}
-        season = pending[-1]
-    elif str(season) in done and not dry_run:
-        return {"skipped": f"season {season} recap already posted", "record": done[str(season)]}
+        if eff_kind == "auto":
+            eff_kind = "preview"
+        eff_start = eff_start or 1
+    elif eff_kind == "auto" and season is None and eff_start is None and eff_end is None:
+        due = pick_next_due_recap(league, posted_state)
+        if not due:
+            logger.info("No recap milestone is due right now. Nothing to do.")
+            return {"skipped": "no recap milestone due"}
+        recap_key = str(due["key"])
+        season = int(due["season"])
+        eff_kind = str(due["recap_kind"])
+        eff_start = int(due["start_race"])
+        eff_end = int(due["end_race"])
+    else:
+        season = int(season or league.get("season", 1))
+        completed_seasons = {int(c["season"]) for c in league.get("past_champions", [])}
+        cur_hist = [int(e["race"]) for e in league.get("history", []) if int(e.get("season", 0)) == season]
+        cur_races = max_races if season in completed_seasons else (max(cur_hist) if cur_hist else 0)
+        if eff_kind == "auto":
+            eff_kind = "full" if season in completed_seasons else "part1"
+        if eff_kind == "part1":
+            eff_start = eff_start or 1
+            eff_end = eff_end or (min(cur_races, 19) if season == 1 and cur_races > 10 else 10)
+        elif eff_kind == "part2":
+            p1_end = int((done.get(f"s{season}_part1") or {}).get("end_race", 10))
+            eff_start = eff_start or (p1_end + 1)
+            eff_end = eff_end or 20
+        elif eff_kind == "part3":
+            p2_end = int((done.get(f"s{season}_part2") or {}).get("end_race", 20))
+            eff_start = eff_start or (p2_end + 1)
+            eff_end = eff_end or max_races
+        elif eff_kind == "full":
+            eff_start = eff_start or 1
+            eff_end = eff_end or max_races
+        else:
+            eff_start = eff_start or 1
+        recap_key = f"s{season}_{eff_kind}"
+        if recap_key in done and not dry_run:
+            return {"skipped": f"{recap_key} already posted", "record": done[recap_key]}
 
-    meta = generate_season_recap_video(league, int(season), output_dir=OUTPUT_DIR, stills_dir=stills_dir)
+    logger.info(
+        "Running Marble League Season %s recap | kind=%s | races=%s..%s | dry_run=%s",
+        season,
+        eff_kind,
+        eff_start or 1,
+        eff_end or "latest",
+        dry_run,
+    )
+    meta = generate_season_recap_video(
+        league,
+        int(season),
+        output_dir=OUTPUT_DIR,
+        stills_dir=stills_dir,
+        start_race=int(eff_start or 1),
+        end_race=eff_end,
+        recap_kind=eff_kind,
+    )
     video_path = Path(meta["video_path"])
     validation = validate_video_package(
-        video_path, meta, min_duration=60.0, max_duration=3600.0, expected_width=1920, expected_height=1080,
+        video_path,
+        meta,
+        min_duration=45.0,
+        max_duration=3600.0,
+        expected_width=1920,
+        expected_height=1080,
         max_size_mb=4000.0,
     )
     if not validation.ok:
         raise RuntimeError(f"Season recap failed validation: {validation.errors}")
-    logger.info("Season recap validated: %.1fs, %dx%d, %.1f MB", validation.duration_sec, validation.width,
-                validation.height, validation.file_size_mb)
+    logger.info(
+        "Season recap validated: %.1fs, %dx%d, %.1f MB",
+        validation.duration_sec,
+        validation.width,
+        validation.height,
+        validation.file_size_mb,
+    )
 
     result: Dict[str, Any] = {"meta": meta, "validation": validation.__dict__, "uploaded": False}
-    if not dry_run and meta.get("complete"):
+    if not dry_run and eff_kind in ("part1", "part2", "part3", "full"):
+        if eff_kind == "part1":
+            first_comment = (
+                f"Part 1 is in the books! Who takes control in Part 2 when Knockouts begin? "
+                f"Comment your country! 👇"
+            )
+        elif eff_kind == "part2":
+            first_comment = (
+                f"Only the survivors remain! Who wins the Season {season} Finale? Comment your country! 👇"
+            )
+        else:
+            first_comment = (
+                f"Who wins Season {int(season) + 1}? Comment your country — the most-requested nation "
+                f"gets the Crowd Boost! 👇"
+            )
         vid, url = upload_long_video(
             video_path,
             meta,
             posted_state,
             playlist_title=f"Marble League Season {season}",
             thumbnail_path=Path(meta["thumbnail_path"]),
-            first_comment=f"Who wins Season {int(season) + 1}? Comment your country — the most-requested nation "
-                          f"gets the Crowd Boost! 👇",
+            first_comment=first_comment,
         )
-        done[str(season)] = {
+        key_to_save = recap_key or f"s{int(season)}_{eff_kind}"
+        done[key_to_save] = {
             "video_id": vid,
             "url": url,
+            "title": meta["title"],
+            "season": int(season),
+            "recap_kind": eff_kind,
+            "start_race": meta["start_race"],
+            "end_race": meta["end_race"],
             "posted_utc": datetime.datetime.now(datetime.timezone.utc).isoformat(),
             "duration_sec": validation.duration_sec,
         }
         save_posted_state(posted_state)
-        result.update({"uploaded": True, "url": url})
+        result.update({"uploaded": True, "url": url, "recap_key": key_to_save})
     return result
 
 
@@ -595,6 +681,14 @@ def main() -> int:
     parser.add_argument("--season-recap", action="store_true",
                         help="Render/upload the long-form 16:9 Marble League season recap (no Short is made)")
     parser.add_argument("--recap-season", type=int, default=None, help="Season number for --season-recap")
+    parser.add_argument(
+        "--recap-kind",
+        choices=["auto", "part1", "part2", "part3", "full", "preview"],
+        default="auto",
+        help="Episodic recap mode (auto milestone, part1, part2, part3, full, or preview)",
+    )
+    parser.add_argument("--recap-start-race", type=int, default=None, help="Optional starting race number")
+    parser.add_argument("--recap-end-race", type=int, default=None, help="Optional ending race number")
     parser.add_argument("--recap-preview", action="store_true",
                         help="With --season-recap: render the in-progress season so far (dry run, never uploads)")
     parser.add_argument("--recap-stills", type=str, default=None, help="Directory to save QA stills of the recap")
@@ -606,6 +700,9 @@ def main() -> int:
             dry_run=args.dry_run,
             preview_so_far=args.recap_preview,
             stills_dir=Path(args.recap_stills) if args.recap_stills else None,
+            recap_kind=args.recap_kind,
+            start_race=args.recap_start_race,
+            end_race=args.recap_end_race,
         )
         print(json.dumps(result, indent=2, ensure_ascii=False, default=str))
         return 0

@@ -147,17 +147,90 @@ class SeasonRecapPlanTest(unittest.TestCase):
         names = [s.name for s in segs]
         self.assertEqual(names[0], "cold_open")
         self.assertEqual(names[-1], "end_screen")
+        # Verify sped-up starting sequence reaches Race 1 in <16.5s (down from ~28s)
+        first_race_i = next(i for i, s in enumerate(segs) if s.name.startswith("race_"))
+        intro_dur = sum(s.duration for s in segs[:first_race_i])
+        self.assertLess(intro_dur, 16.5)
         self.assertGreater(sum(s.duration for s in segs), 60.0)
-        race_seg = next(s for s in segs if s.name.startswith("race_"))
+        race_seg = segs[first_race_i]
         for t in (0.0, race_seg.duration * 0.5, race_seg.duration - 0.05):
             img = race_seg.render(t)
             self.assertEqual(img.size, (1920, 1080))
-        meta = sr.build_recap_metadata(data, [(0.0, "Cold open"), (12.0, "The 16 nations"), (30.0, "Group Stage")],
-                                       100.0)
+        meta = sr.build_recap_metadata(data, [(0.0, "Intro"), (12.0, "The Group Stage")], 100.0)
         self.assertLessEqual(len(meta["title"]), 100)
-        self.assertIn("0:00 Cold open", meta["description"])
+        self.assertIn("0:00 Intro", meta["description"])
+
+        # Also test an episodic Part 2 slice (start_race=6..end_race=10) preserves cumulative points
+        if len(replays) >= 10:
+            slice_data = sr.build_season_data(state, season, replays, start_race=6, end_race=10, recap_kind="part2")
+            slice_segs = sr.plan_segments(slice_data, _StubBank())
+            race_names = [s.name for s in slice_segs if s.name.startswith("race_")]
+            self.assertEqual(race_names, ["race_6", "race_7", "race_8", "race_9", "race_10"])
+            self.assertIn("table_entering_table", [s.name for s in slice_segs])
+            # Render entering table and Part 2 teaser frames cleanly
+            for seg_check in slice_segs[:4] + [slice_segs[-2]]:
+                im = seg_check.render(seg_check.duration * 0.5)
+                self.assertEqual(im.size, (1920, 1080))
+
         after = LEAGUE_STATE_FILE.read_text(encoding="utf-8") if LEAGUE_STATE_FILE.exists() else None
         self.assertEqual(before, after)
+
+
+class EpisodicRecapScheduleTest(unittest.TestCase):
+    def test_season1_catchup_and_season2_clean_10_10_8_plus_full_lifecycle(self) -> None:
+        import datetime as dt
+        from common.recap_schedule import pick_next_due_recap
+
+        t0 = dt.datetime(2026, 4, 15, 17, 20, tzinfo=dt.timezone.utc)
+        league = {
+            "season": 1,
+            "max_races_per_season": 28,
+            "past_champions": [],
+            "history": [{"season": 1, "race": r} for r in range(1, 14)],
+        }
+        posted: dict = {"season_recaps": {}}
+
+        # 1. Season 1 at Race 13 -> Part 1 due right now covering Races 1..13
+        due = pick_next_due_recap(league, posted, now_utc=t0)
+        self.assertEqual(due, {"key": "s1_part1", "season": 1, "recap_kind": "part1", "start_race": 1, "end_race": 13})
+        posted["season_recaps"]["s1_part1"] = {"end_race": 13, "posted_utc": t0.isoformat()}
+
+        # 2. Races 14..19 (including Sunday!) -> None (no duplicate Sunday recaps)
+        league["history"] = [{"season": 1, "race": r} for r in range(1, 20)]
+        self.assertIsNone(pick_next_due_recap(league, posted, now_utc=t0 + dt.timedelta(days=4)))
+
+        # 3. Race 20 -> Part 2 due covering Races 14..20
+        league["history"] = [{"season": 1, "race": r} for r in range(1, 21)]
+        due2 = pick_next_due_recap(league, posted, now_utc=t0 + dt.timedelta(days=7))
+        self.assertEqual(due2, {"key": "s1_part2", "season": 1, "recap_kind": "part2", "start_race": 14, "end_race": 20})
+        posted["season_recaps"]["s1_part2"] = {"end_race": 20, "posted_utc": (t0 + dt.timedelta(days=7)).isoformat()}
+
+        # 4. Season 1 finishes Race 28 -> league rolls to Season 2 (race 0), Season 1 in past_champions
+        t_fin = t0 + dt.timedelta(days=15)
+        league["past_champions"] = [{"season": 1, "champion": "JP"}]
+        league["season"] = 2
+        league["history"].extend([{"season": 1, "race": r} for r in range(21, 29)])
+        due3 = pick_next_due_recap(league, posted, now_utc=t_fin)
+        self.assertEqual(due3, {"key": "s1_part3", "season": 1, "recap_kind": "part3", "start_race": 21, "end_race": 28})
+        posted["season_recaps"]["s1_part3"] = {"end_race": 28, "posted_utc": t_fin.isoformat()}
+
+        # 5. 2 hours after Part 3 -> Full Movie waits for >=18h spacing
+        self.assertIsNone(pick_next_due_recap(league, posted, now_utc=t_fin + dt.timedelta(hours=2)))
+
+        # 6. Next evening (~24h later) -> Full 28-race Season 1 Movie due!
+        due_full = pick_next_due_recap(league, posted, now_utc=t_fin + dt.timedelta(hours=24))
+        self.assertEqual(due_full, {"key": "s1_full", "season": 1, "recap_kind": "full", "start_race": 1, "end_race": 28})
+        posted["season_recaps"]["s1_full"] = {"end_race": 28, "posted_utc": (t_fin + dt.timedelta(hours=24)).isoformat()}
+
+        # 7. Season 2 splits cleanly into 1..10, 11..20, 21..28, and 1..28!
+        league["history"].extend([{"season": 2, "race": r} for r in range(1, 12)])
+        due_s2_p1 = pick_next_due_recap(league, posted, now_utc=t_fin + dt.timedelta(days=11))
+        self.assertEqual(due_s2_p1, {"key": "s2_part1", "season": 2, "recap_kind": "part1", "start_race": 1, "end_race": 10})
+        posted["season_recaps"]["s2_part1"] = {"end_race": 10, "posted_utc": (t_fin + dt.timedelta(days=11)).isoformat()}
+
+        league["history"].extend([{"season": 2, "race": r} for r in range(12, 21)])
+        due_s2_p2 = pick_next_due_recap(league, posted, now_utc=t_fin + dt.timedelta(days=20))
+        self.assertEqual(due_s2_p2, {"key": "s2_part2", "season": 2, "recap_kind": "part2", "start_race": 11, "end_race": 20})
 
 
 if __name__ == "__main__":

@@ -15,6 +15,7 @@ Never mutates league state. Renders only on GitHub Actions (ffmpeg is never invo
 """
 
 import copy
+import datetime
 import hashlib
 import logging
 import math
@@ -154,6 +155,9 @@ class SeasonData:
     champion: Optional[str]
     wildcards: Dict[str, int] = field(default_factory=dict)
     awarded: List[Dict[str, float]] = field(default_factory=list)
+    start_race: int = 1
+    end_race: int = 28
+    recap_kind: str = "full"  # "part1" | "part2" | "part3" | "full" | "preview"
 
 
 def _race_order(rep: RaceReplay, entry: Dict[str, Any]) -> Tuple[List[str], bool]:
@@ -174,10 +178,20 @@ def _awarded(rep: RaceReplay, entry: Dict[str, Any]) -> Tuple[Dict[str, float], 
     return pts, full
 
 
-def build_season_data(state: Dict[str, Any], season: int, replays: List[RaceReplay]) -> SeasonData:
+def build_season_data(
+    state: Dict[str, Any],
+    season: int,
+    replays: List[RaceReplay],
+    start_race: int = 1,
+    end_race: Optional[int] = None,
+    recap_kind: str = "full",
+) -> SeasonData:
     from generators.marble_league import LEAGUE_COUNTRY_CODES
 
     max_races = int(state.get("max_races_per_season", 28))
+    if end_race is not None:
+        replays = [r for r in replays if r.race <= int(end_race)]
+    actual_end = replays[-1].race if replays else (int(end_race) if end_race else max_races)
     entries = {int(e["race"]): e for e in state.get("history", []) if int(e.get("season", 0)) == season}
     codes = list(LEAGUE_COUNTRY_CODES)
 
@@ -200,10 +214,15 @@ def build_season_data(state: Dict[str, Any], season: int, replays: List[RaceRepl
         if pa:
             ref_i, ref_pts = i, {c: float(v) for c, v in pa.items()}
             break
-    archive = (state.get("season_archive") or {}).get(str(season))
+    archive = (state.get("season_archive") or {}).get(str(season)) if actual_end >= max_races else None
     if ref_pts is None and archive:
         ref_i, ref_pts = len(replays) - 1, {r["code"]: float(r["points"]) for r in archive["final_standings"]}
-    if ref_pts is None and int(state.get("season", 0)) == season and replays:
+    if (
+        ref_pts is None
+        and int(state.get("season", 0)) == season
+        and replays
+        and replays[-1].race == int(state.get("race_number", 0))
+    ):
         ref_i = len(replays) - 1
         ref_pts = {c: float(v.get("points", 0)) for c, v in state.get("countries", {}).items()}
     points_after = [dict(p) for p in raw_after]
@@ -256,10 +275,27 @@ def build_season_data(state: Dict[str, Any], season: int, replays: List[RaceRepl
              "podiums": pods.get(c, 0), "eliminated": c in elim}
             for c in order_final
         ]
-    complete = bool(archive) or (len(replays) >= max_races)
+    complete = (bool(archive) or len(replays) >= max_races) and actual_end >= max_races
     champion = (archive or {}).get("champion") or (final_table[0]["code"] if complete and final_table else None)
-    return SeasonData(season, get_season_theme(season), replays, max_races, complete, points_after, wins, pods,
-                      seconds, elim, final_table, champion, wild, awarded)
+    return SeasonData(
+        season=season,
+        theme=get_season_theme(season),
+        replays=replays,
+        max_races=max_races,
+        complete=complete,
+        points_after=points_after,
+        wins=wins,
+        podiums=pods,
+        seconds=seconds,
+        eliminated_at=elim,
+        final_table=final_table,
+        champion=champion,
+        wildcards=wild,
+        awarded=awarded,
+        start_race=max(1, int(start_race)),
+        end_race=actual_end,
+        recap_kind=recap_kind,
+    )
 
 
 _TIEBREAKS: Dict[int, Dict[str, Tuple[int, int]]] = {}
@@ -291,20 +327,21 @@ class Segment:
 class VoiceBank:
     """Synthesizes lines once and reports durations so segment timings can fit the narration."""
 
-    def __init__(self, out_dir: Path) -> None:
+    def __init__(self, out_dir: Path, length_scale: float = 0.90) -> None:
         self.out_dir = out_dir
+        self.length_scale = length_scale
         self.cache: Dict[str, Tuple[Path, float]] = {}
 
     def get(self, text: str) -> Tuple[Path, float]:
         if text not in self.cache:
-            self.cache[text] = synthesize_phrase(text, self.out_dir)
+            self.cache[text] = synthesize_phrase(text, self.out_dir, length_scale=self.length_scale)
         return self.cache[text]
 
     def dur(self, text: str) -> float:
         return self.get(text)[1]
 
 
-def layout_lines(bank: VoiceBank, lines: List[Tuple[float, str, int]], seg_end: float, gap: float = 0.3
+def layout_lines(bank: VoiceBank, lines: List[Tuple[float, str, int]], seg_end: float, gap: float = 0.25
                  ) -> List[Tuple[float, str]]:
     """Places (t, text, priority) lines without overlap; higher priority first; slides later when busy."""
     placed: List[Tuple[float, float, str]] = []
@@ -323,6 +360,19 @@ def layout_lines(bank: VoiceBank, lines: List[Tuple[float, str, int]], seg_end: 
 
 
 # =========================================================================== shared chrome
+def _episode_header_suffix(data: SeasonData) -> str:
+    k = data.recap_kind
+    if k == "part1":
+        return f" • PART 1 (R{data.start_race}–R{data.end_race})"
+    if k == "part2":
+        return f" • PART 2 (R{data.start_race}–R{data.end_race})"
+    if k == "part3":
+        return f" • FINALE (R{data.start_race}–R{data.end_race})"
+    if k == "full" or data.complete:
+        return " • FULL SEASON"
+    return " • SO FAR"
+
+
 class Chrome:
     def __init__(self, data: SeasonData) -> None:
         self.data = data
@@ -335,8 +385,8 @@ class Chrome:
         th = self.theme
         d.rounded_rectangle([40, 18, 330, 54], radius=10, fill=th.primary_accent)
         text_c(d, "CALL IT ARENA", 185, 25, get_font(26, title=True), BG_COLOR)
-        text_l(d, f"MARBLE LEAGUE • SEASON {self.data.season}"
-               + ("" if self.data.complete else " • SO FAR"), 346, 26, get_font(24, title=True), TEXT_WHITE)
+        text_l(d, f"MARBLE LEAGUE • SEASON {self.data.season}{_episode_header_suffix(self.data)}", 346, 26,
+               get_font(24, title=True), TEXT_WHITE)
         if chapter_tag:
             text_r(d, chapter_tag, W - 40, 26, get_font(24, title=True), th.primary_accent)
         return img
@@ -457,46 +507,77 @@ class RecapBuilder:
         self.chrome = Chrome(data)
         self.theme = data.theme
         self.season = data.season
-        self.n_races = len(data.replays)
+        self.ep_replays = [r for r in data.replays if r.race >= data.start_race]
+        self.n_races = len(self.ep_replays)
 
-    # ---------------------------------------------------------------- cold open
+    # ---------------------------------------------------------------- cold open (fast 1.8s cuts, 0.15s slam text)
     def cold_open(self) -> Segment:
-        reps = [r for r in self.data.replays if r.available and r.frames]
+        reps = [r for r in self.ep_replays if r.available and r.frames] or [
+            r for r in self.data.replays if r.available and r.frames
+        ]
         th = self.theme
+        clip_len = 1.8
         clips: List[Tuple[RaceReplay, float, float]] = []
         gf = next((r for r in reps if r.stage == "Monthly Grand Final"), None)
         if gf:
-            clips.append((gf, 0.0, 4.5))
+            clips.append((gf, 0.0, clip_len))
         ko = next((r for r in reversed(reps) if r.stage == "Knockout Stage"), None)
         if ko and ko.first_finish_t:
-            clips.append((ko, max(0.0, ko.first_finish_t - 4.3), ko.first_finish_t - 0.4))
+            a0 = max(0.0, ko.first_finish_t - clip_len - 0.35)
+            clips.append((ko, a0, a0 + clip_len))
         tight = sorted((r for r in reps if len(r.finish_times) >= 2),
                        key=lambda r: sorted(r.finish_times.values())[1] - sorted(r.finish_times.values())[0])
         for r in tight:
-            if all(r is not c[0] for c in clips) and r.first_finish_t:
-                clips.append((r, max(0.0, r.first_finish_t - 4.0), r.first_finish_t - 0.35))
+            if len(clips) >= 3:
                 break
+            if all(r is not c[0] for c in clips) and r.first_finish_t:
+                a0 = max(0.0, r.first_finish_t - clip_len - 0.35)
+                clips.append((r, a0, a0 + clip_len))
         for r in reps:
             if len(clips) >= 3:
                 break
             if all(r is not c[0] for c in clips):
-                clips.append((r, 0.0, 4.0))
+                a0 = max(0.0, r.first_finish_t - clip_len - 0.35) if r.first_finish_t else 0.0
+                clips.append((r, a0, a0 + clip_len))
         clips = clips[:3]
-        slams = (["28 RACES", "16 NATIONS", "ONE CHAMPION"] if self.data.complete
-                 else [f"{self.n_races} RACES", "16 NATIONS", "ONE TITLE"])
+
+        kind = self.data.recap_kind
+        if kind == "part1":
+            slams = [f"{self.n_races} RACES", "16 NATIONS", "PART ONE"]
+        elif kind == "part2":
+            slams = [f"{self.n_races} RACES", "KNOCKOUTS", "PART TWO"]
+        elif kind == "part3":
+            slams = [f"{self.n_races} RACES", "GRAND FINAL", "THE FINALE"]
+        elif kind == "full" or self.data.complete:
+            slams = ["28 RACES", "16 NATIONS", "ONE CHAMPION"]
+        else:
+            slams = [f"{self.n_races} RACES", "16 NATIONS", "ONE TITLE"]
+
         views = [ArenaView(r, th) for r, _, _ in clips]
         bounds: List[Tuple[float, float]] = []
         acc = 0.0
         for _r, a, b in clips:
-            ln = max(2.5, b - a)
+            ln = max(1.6, b - a)
             bounds.append((acc, acc + ln))
             acc += ln
-        dur = max(acc, 9.0)
-        base = self.chrome.bg.copy()
+
         n_word = NUM_WORDS.get(self.n_races, str(self.n_races))
-        line = (f"Twenty-eight races. Sixteen nations. Only one champion." if self.data.complete
-                else f"{n_word} races in. Sixteen nations. One title.")
-        line2 = f"This is Marble League, season {self.season}."
+        if kind == "part1":
+            line = f"{n_word} opening races. Sixteen nations. Who takes early control?"
+        elif kind == "part2":
+            line = f"{n_word} high-stakes races. Knockouts begin. Don't finish last!"
+        elif kind == "part3":
+            line = f"The final {n_word.lower()} races. Triple-points Grand Final. One champion!"
+        elif kind == "full" or self.data.complete:
+            line = "Twenty-eight races. Sixteen nations. Only one champion!"
+        else:
+            line = f"{n_word} races in. Sixteen nations. One title!"
+        dur = max(acc, self.bank.dur(line) + 0.45, 4.8)
+        if bounds and dur > acc:
+            # Stretch the final cut slightly if spoken hook needs a fraction of a second more
+            bounds[-1] = (bounds[-1][0], dur)
+        base = self.chrome.bg.copy()
+        sfx = [SfxEvent(max(0.02, a + 0.02), "tick", 0.6, 0.9 + 0.1 * idx) for idx, (a, _b) in enumerate(bounds)]
 
         def render(t: float) -> Image.Image:
             img = base.copy()
@@ -513,12 +594,12 @@ class RecapBuilder:
                 d.rectangle([vx - 4, VIEW_Y - 4, vx + VIEW_W + 4, VIEW_Y + VIEW_H + 4], outline=th.primary_accent,
                             width=4)
                 slam = slams[k % len(slams)]
-                p = ease_out((local - 0.12) / 0.32)
+                p = ease_out(local / 0.15)
                 if p > 0:
                     word1, word2 = slam.split(" ")[0], " ".join(slam.split(" ")[1:])
                     left = k % 2 == 0
-                    shift = 70 * (1 - p) * (-1 if left else 1)
-                    f1 = get_font(int(230 + 40 * (1 - p)), title=True)
+                    shift = 55 * (1 - p) * (-1 if left else 1)
+                    f1 = get_font(int(230 + 30 * (1 - p)), title=True)
                     f2 = fit_font(d, word2, 380, (112, 96, 84))
                     col1 = blend_rgb(th.bg_outer, th.primary_accent, p)
                     col2 = blend_rgb(th.bg_outer, TEXT_WHITE, p)
@@ -535,10 +616,10 @@ class RecapBuilder:
             self.chrome.caption(img, _active(lines, self.bank, t))
             return img
 
-        lines = layout_lines(self.bank, [(0.4, line, 3), (dur - self.bank.dur(line2) - 0.3, line2, 2)], dur)
-        return Segment("cold_open", dur, render, voice=lines, chapter="Intro", crossfade=False)
+        lines = layout_lines(self.bank, [(0.15, line, 3)], dur)
+        return Segment("cold_open", dur, render, voice=lines, sfx=sfx, chapter="Intro", crossfade=False)
 
-    # ---------------------------------------------------------------- title
+    # ---------------------------------------------------------------- title (snappy 0.22s slam + narrated)
     def title(self) -> Segment:
         from generators.marble_league import LEAGUE_COUNTRY_CODES
 
@@ -546,39 +627,58 @@ class RecapBuilder:
         edition = "CLASSIC ARENA" if th.is_classic else f"{th.edition_name} EDITION"
         base = self.chrome.bg.copy()
         codes = list(LEAGUE_COUNTRY_CODES)
+        kind = self.data.recap_kind
+        sr, er = self.data.start_race, self.data.end_race
+        if kind == "part1":
+            sub = f"SEASON {self.season}  —  PART 1 (RACES {sr}–{er})"
+            spoken = f"Marble League Season {self.season}, Part One!"
+        elif kind == "part2":
+            sub = f"SEASON {self.season}  —  PART 2 (RACES {sr}–{er})"
+            spoken = f"Marble League Season {self.season}, Part Two!"
+        elif kind == "part3":
+            sub = f"SEASON {self.season}  —  THE FINALE (RACES {sr}–{er})"
+            spoken = f"Marble League Season {self.season}, The Finale!"
+        elif kind == "full" or self.data.complete:
+            sub = f"SEASON {self.season}  —  THE FULL SEASON"
+            spoken = f"This is Marble League, Season {self.season}!"
+        else:
+            sub = f"SEASON {self.season}  —  THE STORY SO FAR"
+            spoken = f"This is Marble League, Season {self.season}!"
+        dur = max(2.4, self.bank.dur(spoken) + 0.4)
+        voice = layout_lines(self.bank, [(0.12, spoken, 3)], dur)
 
         def render(t: float) -> Image.Image:
             img = base.copy()
             d = ImageDraw.Draw(img)
-            # 16-flag parade sweeping in along the bottom
             for i, c in enumerate(codes):
-                fp = ease_out((t - 0.15 - i * 0.05) / 0.45)
+                fp = ease_out((t - 0.03 - i * 0.02) / 0.20)
                 if fp <= 0:
                     continue
                 cx = W / 2 + (i - 7.5) * 104
-                cy = 870 + 60 * (1 - fp)
-                paste_flag(img, c, cx, cy, int(78 * (0.7 + 0.3 * fp)),
+                cy = 865 + 45 * (1 - fp)
+                paste_flag(img, c, cx, cy, int(78 * (0.75 + 0.25 * fp)),
                            border=th.marble_palette[i % len(th.marble_palette)], bw=3)
-            p = ease_out(t / 0.8)
-            text_c(d, "MARBLE LEAGUE", W / 2, 230 - 40 * (1 - p), get_font(int(190 + 20 * (1 - p)), title=True),
+            p = ease_out(t / 0.22)
+            text_c(d, "MARBLE LEAGUE", W / 2, 225 - 30 * (1 - p), get_font(int(190 + 16 * (1 - p)), title=True),
                    blend_rgb(th.bg_outer, TEXT_WHITE, p))
-            q = ease_out((t - 0.5) / 0.6)
+            q = ease_out((t - 0.08) / 0.22)
             if q > 0:
                 bar_w = int(980 * q)
-                d.rectangle([W / 2 - bar_w / 2, 470, W / 2 + bar_w / 2, 477], fill=th.primary_accent)
-                sub = f"SEASON {self.season}  —  " + ("THE FULL SEASON" if self.data.complete else "THE STORY SO FAR")
-                text_c(d, sub, W / 2, 505, get_font(84, title=True), blend_rgb(th.bg_outer, th.primary_accent, q))
-            r = ease_out((t - 1.1) / 0.6)
+                d.rectangle([W / 2 - bar_w / 2, 465, W / 2 + bar_w / 2, 472], fill=th.primary_accent)
+                text_c(d, sub, W / 2, 500, fit_font(d, sub, 1500, (84, 74, 64)),
+                       blend_rgb(th.bg_outer, th.primary_accent, q))
+            r = ease_out((t - 0.16) / 0.22)
             if r > 0:
                 ew = _text_w(d, edition, get_font(38, title=True)) + 60
-                d.rounded_rectangle([W / 2 - ew / 2, 640, W / 2 + ew / 2, 698], radius=29,
+                d.rounded_rectangle([W / 2 - ew / 2, 635, W / 2 + ew / 2, 693], radius=29,
                                     outline=blend_rgb(th.bg_outer, th.text_muted, r), width=2)
-                text_c(d, edition, W / 2, 652, get_font(38, title=True), blend_rgb(th.bg_outer, th.text_muted, r))
+                text_c(d, edition, W / 2, 647, get_font(38, title=True), blend_rgb(th.bg_outer, th.text_muted, r))
+            self.chrome.caption(img, _active(voice, self.bank, t))
             return img
 
-        return Segment("title", 4.8, render, sfx=[SfxEvent(0.25, "reveal_fanfare", 0.8, 1.0)])
+        return Segment("title", dur, render, voice=voice, sfx=[SfxEvent(0.08, "reveal_fanfare", 0.75, 1.0)])
 
-    # ---------------------------------------------------------------- roster
+    # ---------------------------------------------------------------- roster (fast 0.04s stagger, ~3.5s)
     def roster(self) -> Segment:
         from generators.marble_league import LEAGUE_COUNTRY_CODES
 
@@ -587,54 +687,60 @@ class RecapBuilder:
         bd = ImageDraw.Draw(base)
         text_c(bd, "THE 16 NATIONS", W / 2, 92, get_font(76, title=True), TEXT_WHITE)
         codes = list(LEAGUE_COUNTRY_CODES)
-        line = "Sixteen nations. Group stage, knockouts, finals, and one Grand Final."
-        dur = max(8.0, self.bank.dur(line) + 1.8)
+        line = "Sixteen nations battle across four stages for one championship."
+        dur = max(3.6, self.bank.dur(line) + 0.5)
         cells = []
         for i, c in enumerate(codes):
             col, row = i % 4, i // 4
             cells.append((c, 300 + col * 440, 270 + row * 175))
-        sfx = [SfxEvent(0.5 + i * 0.12, "tick", 0.5, 1.0 + (i % 4) * 0.08) for i in range(len(codes))]
+        sfx = [SfxEvent(0.06 + i * 0.04, "tick", 0.45, 1.0 + (i % 4) * 0.08) for i in range(len(codes))]
+        voice = layout_lines(self.bank, [(0.15, line, 2)], dur)
 
         def render(t: float) -> Image.Image:
             img = base.copy()
             d = ImageDraw.Draw(img)
             for i, (c, cx, cy) in enumerate(cells):
-                p = ease_out((t - 0.5 - i * 0.12) / 0.35)
+                p = ease_out((t - 0.06 - i * 0.04) / 0.20)
                 if p <= 0:
                     continue
-                dd = int(96 * (0.6 + 0.4 * p))
+                dd = int(96 * (0.65 + 0.35 * p))
                 panel(d, th, (cx - 200, cy - 70, cx + 200, cy + 70), radius=18)
                 paste_flag(img, c, cx - 120, cy, dd, border=th.marble_palette[i % len(th.marble_palette)], bw=4)
                 text_l(d, country_name(c).upper(), cx - 50, cy - 26, fit_font(d, country_name(c).upper(), 230,
                                                                                (52, 44, 38)), TEXT_WHITE)
+            self.chrome.caption(img, _active(voice, self.bank, t))
             return img
 
-        return Segment("roster", dur, render, voice=layout_lines(self.bank, [(0.6, line, 2)], dur), sfx=sfx,
-                       chapter=None)
+        return Segment("roster", dur, render, voice=voice, sfx=sfx, chapter=None)
 
-    # ---------------------------------------------------------------- chapter card
-    def chapter_card(self, idx: int, tag: str, title: str, sub: str) -> Segment:
+    # ---------------------------------------------------------------- chapter card (snappy 0.20s slam)
+    def chapter_card(self, idx: int, tag: str, title: str, sub: str, spoken_override: Optional[str] = None) -> Segment:
         th = self.theme
         base = self.chrome.bg.copy()
-        spoken = {0: "Chapter one. The group stage.", 1: "Chapter two. The knockouts. Finish last, and you're out.",
-                  2: "Chapter three. The championship finals. Double points.",
-                  3: "Chapter four. The Grand Final."}[idx]
-        dur = max(3.6, self.bank.dur(spoken) + 1.0)
+        spoken = spoken_override or {
+            0: "The group stage.",
+            1: "The knockouts. Finish last, and you're out!",
+            2: "Championship finals. Double points!",
+            3: "The Grand Final. Triple points!",
+        }[idx]
+        dur = max(2.3, self.bank.dur(spoken) + 0.45)
+        voice = layout_lines(self.bank, [(0.12, spoken, 2)], dur)
 
         def render(t: float) -> Image.Image:
             img = base.copy()
             d = ImageDraw.Draw(img)
-            p = ease_out(t / 0.5)
+            p = ease_out(t / 0.20)
             text_c(d, tag, W / 2, 330, get_font(48, title=True), blend_rgb(th.bg_outer, th.primary_accent, p))
-            text_c(d, title, W / 2 + 80 * (1 - p), 400, get_font(150, title=True), blend_rgb(th.bg_outer, TEXT_WHITE, p))
-            q = ease_out((t - 0.4) / 0.5)
+            text_c(d, title, W / 2 + 55 * (1 - p), 400, get_font(150, title=True), blend_rgb(th.bg_outer, TEXT_WHITE, p))
+            q = ease_out((t - 0.10) / 0.20)
             d.rectangle([W / 2 - 420 * q, 585, W / 2 + 420 * q, 590], fill=th.primary_accent)
             if q > 0:
                 text_c(d, sub, W / 2, 615, get_font(44, title=True), blend_rgb(th.bg_outer, th.text_muted, q))
+            self.chrome.caption(img, _active(voice, self.bank, t))
             return img
 
-        return Segment(f"chapter_{idx}", dur, render, voice=layout_lines(self.bank, [(0.3, spoken, 2)], dur),
-                       sfx=[SfxEvent(0.05, "countdown_beep", 0.5, 0.8)], chapter=title.title())
+        return Segment(f"chapter_{idx}", dur, render, voice=voice,
+                       sfx=[SfxEvent(0.04, "countdown_beep", 0.5, 0.85)], chapter=title.title())
 
     # ---------------------------------------------------------------- race segment
     def race(self, i: int) -> Segment:
@@ -852,13 +958,21 @@ class RecapBuilder:
         return Segment(f"race_{rep.race}", dur, render, voice=voice,
                        sfx=[SfxEvent(0.3, "reveal_fanfare", 0.55, 1.0)])
 
-    # ---------------------------------------------------------------- standings table
-    def table(self, title: str, pts: Dict[str, float], elim: Sequence[str], spoken: str, tag: str) -> Segment:
+    # ---------------------------------------------------------------- standings table (fast 0.03s row stagger)
+    def table(
+        self,
+        title: str,
+        pts: Dict[str, float],
+        elim: Sequence[str],
+        spoken: str,
+        tag: str,
+        chapter: Optional[str] = None,
+    ) -> Segment:
         th = self.theme
         order = ranking(pts, elim)
         base = self.chrome.base(tag)
-        dur = max(7.0, self.bank.dur(spoken) + 2.0)
-        voice = layout_lines(self.bank, [(0.5, spoken, 2)], dur)
+        dur = max(4.8, self.bank.dur(spoken) + 1.0)
+        voice = layout_lines(self.bank, [(0.25, spoken, 2)], dur)
 
         def render(t: float) -> Image.Image:
             img = base.copy()
@@ -866,10 +980,10 @@ class RecapBuilder:
             text_c(d, title, W / 2, 80, get_font(70, title=True), TEXT_WHITE)
             for k, c in enumerate(order):
                 col, row = k // 8, k % 8
-                p = ease_out((t - 0.2 - k * 0.06) / 0.4)
+                p = ease_out((t - 0.06 - k * 0.03) / 0.24)
                 if p <= 0:
                     continue
-                x0 = 120 + col * 860 - 60 * (1 - p)
+                x0 = 120 + col * 860 - 50 * (1 - p)
                 y = 190 + row * 96
                 out = c in elim
                 fill = (60, 22, 30) if out else (th.panel_win_row if k == 0 else th.panel_bg)
@@ -883,7 +997,7 @@ class RecapBuilder:
             self.chrome.caption(img, _active(voice, self.bank, t))
             return img
 
-        return Segment(f"table_{tag}", dur, render, voice=voice)
+        return Segment(f"table_{tag.lower().replace(' ', '_')}", dur, render, voice=voice, chapter=chapter)
 
     # ---------------------------------------------------------------- champion
     def champion(self) -> Segment:
@@ -955,25 +1069,28 @@ class RecapBuilder:
             best = max(climbs, key=lambda c: climbs[c]) if climbs else None
             if best and climbs[best] > 0:
                 out.append(("BIGGEST CLIMBER", "MOST PLACES GAINED", best, f"+{climbs[best]} PLACES"))
-        so = top(data.seconds)
-        if so and so[1] >= 2:
-            out.append(("SO CLOSE AWARD", "MOST SECOND PLACES", so[0], f"{so[1]} TIMES 2ND"))
-        wf = top(data.wildcards)
-        if wf:
-            out.append(("FAN FAVOURITE", "MOST WILDCARD PICKS", wf[0], f"{wf[1]} PICKS"))
+        if data.complete:
+            so = top(data.seconds)
+            if so and so[1] >= 2:
+                out.append(("SO CLOSE AWARD", "MOST SECOND PLACES", so[0], f"{so[1]} TIMES 2ND"))
+            wf = top(data.wildcards)
+            if wf:
+                out.append(("FAN FAVOURITE", "MOST WILDCARD PICKS", wf[0], f"{wf[1]} PICKS"))
 
+        tag_label = "SEASON AWARDS" if data.complete else "STANDOUTS SO FAR"
+        chap_label = "Season awards" if data.complete else "Standouts so far"
         segs: List[Segment] = []
         for n, (award, sub, code, stat) in enumerate(out):
             spoken = f"The {award.title()} goes to {country_name(code)}. {stat.lower()}."
-            dur = max(4.2, self.bank.dur(spoken) + 1.2)
-            base = self.chrome.base("SEASON AWARDS")
-            voice = layout_lines(self.bank, [(0.4, spoken, 2)], dur)
+            dur = max(3.6, self.bank.dur(spoken) + 0.85)
+            base = self.chrome.base(tag_label)
+            voice = layout_lines(self.bank, [(0.25, spoken, 2)], dur)
 
             def render(t: float, award=award, sub=sub, code=code, stat=stat, voice=voice, base=base) -> Image.Image:
                 img = base.copy()
                 d = ImageDraw.Draw(img)
-                p = ease_out(t / 0.5)
-                panel(d, th, (360, 150 + 40 * (1 - p), W - 360, 900), accent=GOLD)
+                p = ease_out(t / 0.28)
+                panel(d, th, (360, 150 + 35 * (1 - p), W - 360, 900), accent=GOLD)
                 text_c(d, award, W / 2, 200, get_font(96, title=True), GOLD)
                 text_c(d, sub, W / 2, 315, get_font(40, title=True), th.text_muted)
                 paste_flag(img, code, W / 2, 530, int(220 * (0.8 + 0.2 * p)), border=GOLD, bw=7)
@@ -982,8 +1099,8 @@ class RecapBuilder:
                 self.chrome.caption(img, _active(voice, self.bank, t))
                 return img
 
-            segs.append(Segment(f"award_{n}", dur, render, voice=voice, chapter="Season awards" if n == 0 else None,
-                                sfx=[SfxEvent(0.15, "reveal_fanfare", 0.5, 1.2)]))
+            segs.append(Segment(f"award_{n}", dur, render, voice=voice, chapter=chap_label if n == 0 else None,
+                                sfx=[SfxEvent(0.10, "reveal_fanfare", 0.5, 1.2)]))
         return segs
 
     # ---------------------------------------------------------------- points race
@@ -991,11 +1108,16 @@ class RecapBuilder:
         th = self.theme
         data = self.data
         steps = [{c: 0.0 for c in data.points_after[0]}] + data.points_after
-        per = 0.75
-        dur = max(10.0, (len(steps) - 1) * per + 3.0)
-        base = self.chrome.base("THE TITLE RACE")
-        spoken = "Here's how the title race unfolded, race by race."
-        voice = layout_lines(self.bank, [(0.4, spoken, 2)], dur)
+        per = 0.58 if len(steps) > 16 else 0.65
+        dur = max(8.5, (len(steps) - 1) * per + 2.4)
+        title_lbl = "THE TITLE RACE" if data.complete else "THE TITLE RACE SO FAR"
+        base = self.chrome.base(title_lbl)
+        spoken = (
+            "Here's how the title race unfolded, race by race."
+            if data.complete
+            else f"Here's how the title race stands through race {data.end_race}."
+        )
+        voice = layout_lines(self.bank, [(0.3, spoken, 2)], dur)
         top_val = max(max(s.values()) for s in steps) or 1.0
         codes = list(steps[0].keys())
         row_h = 52
@@ -1004,7 +1126,7 @@ class RecapBuilder:
         def render(t: float) -> Image.Image:
             img = base.copy()
             d = ImageDraw.Draw(img)
-            x = min(len(steps) - 1.0, max(0.0, (t - 1.0) / per))
+            x = min(len(steps) - 1.0, max(0.0, (t - 0.7) / per))
             k = int(x)
             fr = x - k
             a, b = steps[k], steps[min(k + 1, len(steps) - 1)]
@@ -1012,12 +1134,12 @@ class RecapBuilder:
             race_no = min(len(steps) - 1, k + (1 if fr > 0.5 else 0))
             elim = [c for c, r in data.eliminated_at.items() if r <= max(1, race_no)]
             order = ranking(cur, elim)
-            text_l(d, "THE TITLE RACE", 60, 80, get_font(64, title=True), TEXT_WHITE)
+            text_l(d, title_lbl, 60, 80, get_font(64, title=True), TEXT_WHITE)
             text_r(d, f"AFTER RACE {race_no}", W - 60, 86, get_font(56, title=True), th.primary_accent)
             ys = state["y"]
             for idx, c in enumerate(order):
                 target = 170 + idx * row_h
-                ys[c] = ys.get(c, target) + (target - ys.get(c, target)) * 0.32
+                ys[c] = ys.get(c, target) + (target - ys.get(c, target)) * 0.34
             maxw = W - 520
             color_of = {c: th.marble_palette[i % len(th.marble_palette)] for i, c in enumerate(codes)}
             for c in reversed(order):  # leaders drawn last = on top during overtakes
@@ -1036,65 +1158,121 @@ class RecapBuilder:
 
         return Segment("points_race", dur, render, voice=voice, chapter="The title race")
 
-    # ---------------------------------------------------------------- next season + end screen
+    # ---------------------------------------------------------------- next milestone / next season + end screen
     def next_season(self) -> Segment:
-        nxt = get_season_theme(self.season + 1)
-        th = self.theme
-        base = Image.new("RGB", (W, H), nxt.bg_outer)
-        if not nxt.is_classic:
-            base = wide_backdrop(nxt)
-        if self.data.complete:
-            spoken = f"Season {self.season + 1} starts now, in the brand new {nxt.edition_name.title()} edition."
+        kind = self.data.recap_kind
+        is_mid_episode = kind in ("part1", "part2") and not self.data.complete
+        vis = self.theme if is_mid_episode else get_season_theme(self.season + 1)
+        base = wide_backdrop(vis)
+
+        if kind == "part1" and not self.data.complete:
+            head = "PART 2 DROPS AFTER RACE 20"
+            sub_head = "KNOCKOUTS BEGIN  •  LAST PLACE IS OUT"
+            badge_lbl = "KNOCKOUT ARENA"
+            teaser_variant = "hexagon_spin"
+            spoken = "Part Two drops after race twenty, as the knockout eliminations begin!"
+            spoken2 = "Watch daily races in the Shorts, and comment your country!"
+            chap_lbl = "Coming up in Part 2"
+        elif kind == "part2" and not self.data.complete:
+            head = "THE FINALE DROPS AFTER RACE 28"
+            sub_head = "2X FINALS  •  3X GRAND FINAL"
+            badge_lbl = "GRAND FINAL ARENA"
+            teaser_variant = "mega_gauntlet"
+            spoken = "The Season Finale drops after race twenty-eight, with double and triple points on the line!"
+            spoken2 = "Catch every race daily in the Shorts, and comment your country!"
+            chap_lbl = "Coming up in The Finale"
+        elif self.data.complete:
             head = f"SEASON {self.season + 1} STARTS NOW"
+            sub_head = f"{vis.edition_name} EDITION"
+            badge_lbl = f"SEASON {self.season + 1} ARENA"
+            teaser_variant = "double_ring"
+            spoken = f"Season {self.season + 1} starts now, in the brand new {vis.edition_name.title()} edition."
+            spoken2 = "Comment your country to give them the crowd boost."
+            chap_lbl = "Next season"
         else:
-            spoken = f"The season continues every day in the Shorts. Season {self.season + 1} brings the {nxt.edition_name.title()} edition."
             head = "THE SEASON CONTINUES DAILY"
-        spoken2 = "Comment your country to give them the crowd boost."
-        dur = max(7.0, self.bank.dur(spoken) + self.bank.dur(spoken2) + 1.6)
-        voice = layout_lines(self.bank, [(0.4, spoken, 3), (0.4 + self.bank.dur(spoken) + 0.4, spoken2, 2)], dur)
+            sub_head = f"{vis.edition_name} EDITION NEXT"
+            badge_lbl = f"SEASON {self.season + 1} ARENA"
+            teaser_variant = "double_ring"
+            spoken = f"The season continues every day in the Shorts. Season {self.season + 1} brings the {vis.edition_name.title()} edition."
+            spoken2 = "Comment your country to give them the crowd boost."
+            chap_lbl = "Next season"
+
+        dur = max(6.4, self.bank.dur(spoken) + self.bank.dur(spoken2) + 1.2)
+        voice = layout_lines(self.bank, [(0.3, spoken, 3), (0.3 + self.bank.dur(spoken) + 0.35, spoken2, 2)], dur)
 
         teaser: Optional[Image.Image] = None
         try:
             from common.season_theme import render_seasonal_arena_backdrop
             from generators.race_replay import _build_v2_arena
 
-            arena = _build_v2_arena(f"S{self.season + 1}-teaser", "double_ring", 12, 30.0, 1.0)
-            full = render_seasonal_arena_backdrop(nxt, arena.mode, arena.center, arena.finish_y)
-            arena.kit.render_static(full, neon_glow=True, glow_bg=nxt.bg_center, color_map=nxt.obstacle_remap)
-            arena.kit.render_dynamic(ImageDraw.Draw(full), arena.kit.snapshot(), neon_glow=True,
-                                     glow_bg=nxt.bg_center, color_map=nxt.obstacle_remap)
+            arena = _build_v2_arena(f"S{self.season}-teaser-{kind}", teaser_variant, 12, 30.0, 1.0)
+            full = render_seasonal_arena_backdrop(vis, arena.mode, arena.center, arena.finish_y)
+            arena.kit.render_static(
+                full,
+                neon_glow=not vis.is_classic,
+                glow_bg=vis.bg_center,
+                color_map=vis.obstacle_remap,
+            )
+            arena.kit.render_dynamic(
+                ImageDraw.Draw(full),
+                arena.kit.snapshot(),
+                neon_glow=not vis.is_classic,
+                glow_bg=vis.bg_center,
+                color_map=vis.obstacle_remap,
+            )
             teaser = full.crop((0, CROP_Y0, 1080, CROP_Y1)).resize((640, 628), Image.Resampling.BILINEAR)
         except Exception as e:
-            logger.warning("Next-season teaser window unavailable: %s", e)
+            logger.warning("Teaser window unavailable: %s", e)
 
         def render(t: float) -> Image.Image:
             img = base.copy()
             d = ImageDraw.Draw(img)
-            p = ease_out(t / 0.6)
-            lx = 110 - 60 * (1 - p)
-            text_l(d, head, lx, 250, fit_font(d, head, 1000, (104, 92, 80)), blend_rgb(nxt.bg_outer, TEXT_WHITE, p))
-            text_l(d, f"{nxt.edition_name} EDITION", lx, 390, get_font(84, title=True),
-                   blend_rgb(nxt.bg_outer, nxt.primary_accent, p))
-            for k, col in enumerate(nxt.marble_palette[:6]):
-                q = ease_out((t - 0.5 - k * 0.1) / 0.3)
-                if q > 0:
-                    cx = 150 + k * 110
-                    r = 38 * q
-                    d.ellipse([cx - r, 580 - r, cx + r, 580 + r], fill=col, outline=TEXT_WHITE, width=3)
-            text_l(d, "COMMENT YOUR COUNTRY", lx, 680, get_font(56, title=True), nxt.secondary_accent)
-            text_l(d, "THE MOST-REQUESTED NATION GETS THE CROWD BOOST", lx, 750, get_font(38, title=True),
-                   blend_rgb(nxt.bg_outer, TEXT_WHITE, 0.8))
+            p = ease_out(t / 0.35)
+            lx = 110 - 50 * (1 - p)
+            text_l(d, head, lx, 250, fit_font(d, head, 1000, (96, 86, 76, 66)), blend_rgb(vis.bg_outer, TEXT_WHITE, p))
+            text_l(d, sub_head, lx, 390, fit_font(d, sub_head, 1000, (74, 64, 54)),
+                   blend_rgb(vis.bg_outer, vis.primary_accent, p))
+            if is_mid_episode and self.data.final_table:
+                for k, row in enumerate(self.data.final_table[:6]):
+                    q = ease_out((t - 0.25 - k * 0.05) / 0.24)
+                    if q > 0:
+                        cx = 152 + k * 114
+                        paste_flag(
+                            img,
+                            row["code"],
+                            cx,
+                            568,
+                            max(24, int(78 * q)),
+                            border=MEDALS[k] if k < 3 else TEXT_WHITE,
+                            bw=3,
+                        )
+            else:
+                for k, col in enumerate(vis.marble_palette[:6]):
+                    q = ease_out((t - 0.25 - k * 0.06) / 0.25)
+                    if q > 0:
+                        cx = 150 + k * 110
+                        r = 38 * q
+                        d.ellipse([cx - r, 580 - r, cx + r, 580 + r], fill=col, outline=TEXT_WHITE, width=3)
+            text_l(d, "COMMENT YOUR COUNTRY", lx, 680, get_font(56, title=True), vis.secondary_accent)
+            cta_sub = (
+                "PICK YOUR NATION FOR THE NEXT DAILY RACE"
+                if is_mid_episode
+                else "THE MOST-REQUESTED NATION GETS THE CROWD BOOST"
+            )
+            text_l(d, cta_sub, lx, 750, get_font(38, title=True), blend_rgb(vis.bg_outer, TEXT_WHITE, 0.85))
             if teaser is not None:
-                q = ease_out((t - 0.3) / 0.6)
-                wx, wy = 1180 + int(80 * (1 - q)), 170
-                d.rectangle([wx - 6, wy - 6, wx + 646, wy + 634], outline=nxt.primary_accent, width=6)
+                q = ease_out((t - 0.15) / 0.4)
+                wx, wy = 1180 + int(65 * (1 - q)), 170
+                d.rectangle([wx - 6, wy - 6, wx + 646, wy + 634], outline=vis.primary_accent, width=6)
                 img.paste(teaser, (wx, wy))
-                d.rounded_rectangle([wx + 20, wy + 20, wx + 250, wy + 66], radius=10, fill=nxt.primary_accent)
-                text_c(d, f"SEASON {self.season + 1} ARENA", wx + 135, wy + 28, get_font(30, title=True), BG_COLOR)
+                bw_lbl = max(250, _text_w(d, badge_lbl, get_font(30, title=True)) + 44)
+                d.rounded_rectangle([wx + 20, wy + 20, wx + 20 + bw_lbl, wy + 66], radius=10, fill=vis.primary_accent)
+                text_c(d, badge_lbl, wx + 20 + bw_lbl / 2, wy + 28, get_font(30, title=True), BG_COLOR)
             self.chrome.caption(img, _active(voice, self.bank, t))
             return img
 
-        return Segment("next_season", dur, render, voice=voice, chapter="Next season")
+        return Segment("next_season", dur, render, voice=voice, chapter=chap_lbl)
 
     def end_screen(self) -> Segment:
         th = self.theme
@@ -1127,29 +1305,76 @@ def _active(lines: List[Tuple[float, str]], bank: VoiceBank, t: float) -> Option
 
 
 # =========================================================================== assembly
+def _stage_chapter_copy(stage_idx: int, stage: str, r_first: int, r_last: int, default_sub: str) -> Tuple[str, Optional[str]]:
+    rule_part = default_sub.split("•", 1)[1].strip() if "•" in default_sub else default_sub
+    range_txt = f"Race {r_first}" if r_first == r_last else f"Races {r_first}-{r_last}"
+    sub = f"{range_txt}  •  {rule_part}"
+    spoken: Optional[str] = None
+    if stage == "Group Stage" and r_first > 1:
+        spoken = "Final group stage races."
+    elif stage == "Knockout Stage" and r_first == r_last == 21:
+        spoken = "The final knockout elimination!"
+    return sub, spoken
+
+
 def plan_segments(data: SeasonData, bank: VoiceBank) -> List[Segment]:
     b = RecapBuilder(data, bank)
-    segs: List[Segment] = [b.cold_open(), b.title(), b.roster()]
+    segs: List[Segment] = [b.cold_open(), b.title()]
+
+    first_ep_idx = next((i for i, r in enumerate(data.replays) if r.race >= data.start_race), 0)
+    if data.start_race <= 1 or first_ep_idx == 0:
+        segs.append(b.roster())
+    else:
+        prev_idx = first_ep_idx - 1
+        prev_race = data.replays[prev_idx].race
+        pts_in = data.points_after[prev_idx]
+        elim_in = [c for c, r in data.eliminated_at.items() if r <= prev_race]
+        leader_in = ranking(pts_in, elim_in)[0]
+        spoken_in = (
+            f"Entering race {data.start_race}, {country_name(leader_in)} lead the championship on "
+            f"{int(round(pts_in[leader_in]))} points."
+        )
+        segs.append(
+            b.table(
+                f"STANDINGS ENTERING RACE {data.start_race}",
+                pts_in,
+                elim_in,
+                spoken_in,
+                "ENTERING TABLE",
+                chapter=f"Standings entering Race {data.start_race}",
+            )
+        )
+
     by_stage: Dict[str, List[int]] = {}
     for i, r in enumerate(data.replays):
-        by_stage.setdefault(r.stage, []).append(i)
-    for ci, (stage, tag, title, sub) in enumerate(STAGE_CHAPTERS):
+        if r.race >= data.start_race:
+            by_stage.setdefault(r.stage, []).append(i)
+
+    ep_chap_num = 0
+    for ci, (stage, _tag, title, default_sub) in enumerate(STAGE_CHAPTERS):
         idxs = by_stage.get(stage, [])
         if not idxs:
             continue
-        segs.append(b.chapter_card(ci, tag, title, sub))
+        ep_chap_num += 1
+        r_first, r_last = data.replays[idxs[0]].race, data.replays[idxs[-1]].race
+        sub, spoken_override = _stage_chapter_copy(ci, stage, r_first, r_last, default_sub)
+        segs.append(b.chapter_card(ci, f"CHAPTER {ep_chap_num}", title, sub, spoken_override=spoken_override))
         for i in idxs:
             segs.append(b.race(i))
         last = idxs[-1]
         if stage in ("Group Stage", "Knockout Stage") and last < len(data.replays) - 1 or (
-                stage != "Monthly Grand Final" and last == len(data.replays) - 1):
+            stage != "Monthly Grand Final" and last == len(data.replays) - 1
+        ):
             pts = data.points_after[last]
             elim = [c for c, r in data.eliminated_at.items() if r <= data.replays[last].race]
             leader = ranking(pts, elim)[0]
             n_after = data.replays[last].race
-            spoken = (f"After {NUM_WORDS.get(n_after, n_after)} races, {country_name(leader)} lead on "
-                      f"{int(round(pts[leader]))} points.")
+            spoken = (
+                f"After {NUM_WORDS.get(n_after, n_after)} races, {country_name(leader)} lead on "
+                f"{int(round(pts[leader]))} points."
+            )
             segs.append(b.table(f"STANDINGS AFTER RACE {n_after}", pts, elim, spoken, "TABLE CHECK"))
+
     if data.complete and data.champion:
         segs.append(b.champion())
     segs.extend(b.awards())
@@ -1165,26 +1390,43 @@ def plan_segments(data: SeasonData, bank: VoiceBank) -> List[Segment]:
 
 def _fmt_ts(sec: float) -> str:
     s = int(sec)
-    return f"{s // 60}:{s % 60:02d}" if s < 3600 else f"{s // 3600}:{(s % 3600) // 60:02d}:{s % 60:02d}"
+    return f"{s // 60}:{s % 60:02d}" if s < 3600 else f"{s // 3600}:{(s % 3600) // 60:02d}:{s % 3600 % 60:02d}"
+
+
+from common.recap_schedule import SAFE_RECAP_KINDS, pick_next_due_recap
 
 
 def build_recap_metadata(data: SeasonData, chapters: List[Tuple[float, str]], total: float) -> Dict[str, Any]:
     champ = country_name(data.champion) if data.champion else None
-    if data.complete:
-        title = f"Marble League Season {data.season} — The Full Season: {len(data.replays)} Races, 16 Nations 🏆"
+    kind = data.recap_kind
+    sr, er = data.start_race, data.end_race
+    if kind == "part1":
+        title = f"Marble League Season {data.season} (Part 1) — Races {sr}–{er}: Full Broadcast Recap 🌍"
+        hook = f"Races {sr}–{er} of Marble League Season {data.season} — 16 nations, real Pymunk physics, full commentary!"
+    elif kind == "part2":
+        title = f"Marble League Season {data.season} (Part 2) — Races {sr}–{er}: Knockouts Begin! 🔥"
+        hook = f"Races {sr}–{er} of Marble League Season {data.season} — the Knockout Stage eliminates last place every race!"
+    elif kind == "part3":
+        title = f"Marble League Season {data.season} Finale (Part 3) — Races {sr}–{er} & Grand Final 🏆"
+        hook = f"The Season {data.season} Finale (Races {sr}–{er}) — double-points Finals and the triple-points Grand Final!"
+    elif kind == "full" or data.complete:
+        title = f"Marble League Season {data.season} — The Full Season: All {len(data.replays)} Races, 16 Nations 🏆"
+        hook = f"Every single race of Marble League Season {data.season} — real physics, real results, one champion."
     else:
         title = f"Marble League Season {data.season} — The Story So Far ({len(data.replays)} Races) 🌍"
+        hook = f"Every race of Marble League Season {data.season} so far, with full commentary."
+
     top5 = data.final_table[:5]
+    standings_hdr = "🏁 Final Standings" if data.complete else f"🏁 Standings After Race {er}"
     lines = [
-        f"Every race of Marble League Season {data.season} — real physics, real results, one champion."
-        if data.complete else f"Every race of Marble League Season {data.season} so far, with full commentary.",
+        hook,
         "",
         "⏱️ Chapters",
     ]
     lines += [f"{_fmt_ts(t)} {name}" for t, name in chapters]
-    lines += ["", "🏁 Standings"]
+    lines += ["", standings_hdr]
     lines += [f"{i + 1}. {country_name(r['code'])} — {int(r['points'])} pts" for i, r in enumerate(top5)]
-    if champ:
+    if champ and data.complete:
         lines += ["", f"🏆 Season {data.season} champion: {champ}"]
     lines += [
         "",
@@ -1196,8 +1438,17 @@ def build_recap_metadata(data: SeasonData, chapters: List[Tuple[float, str]], to
     return {
         "title": title[:100],
         "description": "\n".join(lines)[:4900],
-        "tags": ["marble race", "marble league", "country marble race", "marble run", "physics simulation",
-                 "call it arena", f"marble league season {data.season}", "countryballs", "satisfying"],
+        "tags": [
+            "marble race",
+            "marble league",
+            "country marble race",
+            "marble run",
+            "physics simulation",
+            "call it arena",
+            f"marble league season {data.season}",
+            "countryballs",
+            "satisfying",
+        ],
         "categoryId": "24",
         "duration_sec": round(total, 2),
     }
@@ -1207,17 +1458,51 @@ def render_thumbnail(data: SeasonData, out_path: Path) -> Path:
     th = data.theme
     img = wide_backdrop(th).resize((1280, 720), Image.Resampling.BILINEAR)
     d = ImageDraw.Draw(img)
-    top3 = [r["code"] for r in data.final_table[:3]]
+    # For completed finale/full recaps, show the top 3 contenders ENTERING the Grand Final
+    # so the thumbnail builds maximum hype without spoiling the triple-points finale!
+    if data.complete and len(data.points_after) >= 2:
+        prev_race = data.replays[-2].race
+        elim_pre = [c for c, r in data.eliminated_at.items() if r <= prev_race]
+        top3 = ranking(data.points_after[-2], elim_pre)[:3]
+    else:
+        top3 = [r["code"] for r in data.final_table[:3]]
+
+    kind = data.recap_kind
+    sr, er = data.start_race, data.end_race
+    if kind == "part1":
+        top_txt = f"MARBLE LEAGUE • SEASON {data.season} • PART 1"
+        bot_txt = f"RACES {sr}–{er} • 16 NATIONS"
+    elif kind == "part2":
+        top_txt = f"MARBLE LEAGUE • SEASON {data.season} • PART 2"
+        bot_txt = f"RACES {sr}–{er} • KNOCKOUTS"
+    elif kind == "part3":
+        top_txt = f"MARBLE LEAGUE • SEASON {data.season} • FINALE"
+        bot_txt = f"RACES {sr}–{er} • 1 CHAMPION"
+    elif kind == "full" or data.complete:
+        top_txt = f"MARBLE LEAGUE • SEASON {data.season}"
+        bot_txt = f"ALL {len(data.replays)} RACES • FULL SEASON"
+    else:
+        top_txt = f"MARBLE LEAGUE • SEASON {data.season}"
+        bot_txt = f"{len(data.replays)} RACES SO FAR"
+
     d.rectangle([0, 0, 1280, 120], fill=th.primary_accent)
-    text_c(d, f"MARBLE LEAGUE • SEASON {data.season}", 640, 22, get_font(80, title=True), BG_COLOR)
+    text_c(d, top_txt, 640, 24, fit_font(d, top_txt, 1200, (78, 70, 62, 54)), BG_COLOR)
     for k, c in enumerate(top3):
         cx = [640, 300, 980][k]
-        dd = [300, 220, 220][k]
-        cy = [360, 410, 410][k]
-        paste_flag(img, c, cx, cy, dd, border=MEDALS[k], bw=10)
-    head = f"{len(data.replays)} RACES • 1 CHAMPION" if data.complete else f"{len(data.replays)} RACES SO FAR"
+        dd = [284, 212, 212][k]
+        cy = [338, 378, 378][k]
+        paste_flag(img, c, cx, cy, dd, border=MEDALS[k], bw=2)
+        r_out = dd // 2 + 4
+        d.ellipse([cx - r_out, cy - r_out, cx + r_out, cy + r_out], outline=MEDALS[k], width=10)
+        lbl = country_name(c).upper()
+        f_lbl = fit_font(d, lbl, 260, (38, 32, 28))
+        pw = max(160, _text_w(d, lbl, f_lbl) + 44)
+        py = cy + r_out + 14
+        d.rounded_rectangle([cx - pw / 2, py, cx + pw / 2, py + 50], radius=12, fill=th.panel_bg,
+                            outline=MEDALS[k], width=3)
+        text_c(d, lbl, cx, py + 7, f_lbl, TEXT_WHITE)
     d.rectangle([0, 590, 1280, 720], fill=(8, 9, 16))
-    text_c(d, head, 640, 608, get_font(92, title=True), TEXT_WHITE)
+    text_c(d, bot_txt, 640, 610, fit_font(d, bot_txt, 1200, (90, 80, 70)), TEXT_WHITE)
     img.save(out_path, "PNG")
     return out_path
 
@@ -1228,20 +1513,45 @@ def generate_season_recap_video(
     output_dir: Path = OUTPUT_DIR,
     stills_dir: Optional[Path] = None,
     max_races: Optional[int] = None,
+    start_race: int = 1,
+    end_race: Optional[int] = None,
+    recap_kind: str = "full",
 ) -> Dict[str, Any]:
     """Renders the season recap MP4 + thumbnail + metadata. Pure read of `state` (never saved)."""
     state = copy.deepcopy(state)
+    safe_kind = recap_kind if recap_kind in SAFE_RECAP_KINDS else "preview"
+    eff_end = int(end_race) if end_race is not None else (int(max_races) if max_races else None)
+    eff_start = max(1, int(start_race))
+
+    sim_state = copy.deepcopy(state)
+    if eff_end is not None:
+        sim_state["history"] = [
+            e for e in sim_state.get("history", [])
+            if int(e.get("season", 0)) != int(season) or int(e.get("race", 0)) <= eff_end
+        ]
+
     output_dir.mkdir(parents=True, exist_ok=True)
     replays = build_season_replays(
-        state, season,
+        sim_state,
+        int(season),
         progress_cb=lambda r: logger.info("Recap replay S%s R%02d %-18s -> %s (winner %s)", r.season, r.race,
                                           r.variant, r.source, r.winner),
     )
-    if max_races:
-        replays = replays[:max_races]
+    if eff_end is not None:
+        replays = [r for r in replays if r.race <= eff_end]
     if not replays:
         raise ValueError(f"No races recorded for season {season}")
-    data = build_season_data(state, season, replays)
+    if not any(r.race >= eff_start for r in replays):
+        raise ValueError(f"No races >= start_race={eff_start} recorded for season {season}")
+
+    data = build_season_data(
+        state,
+        int(season),
+        replays,
+        start_race=eff_start,
+        end_race=eff_end,
+        recap_kind=safe_kind,
+    )
     bank = VoiceBank(output_dir / "tts_cache")
     segments = plan_segments(data, bank)
 
@@ -1264,7 +1574,7 @@ def generate_season_recap_video(
     if chapters:
         chapters[0] = (0.0, chapters[0][1])
 
-    tag = f"s{season}" + ("" if data.complete else f"_sofar_r{len(replays)}")
+    tag = f"s{int(season)}_{safe_kind}_r{data.start_race}_{data.end_race}"
     audio_path = output_dir / f"season_recap_{tag}.wav"
     mix_master_audio(total, audio_path, sfx_events=sfx, voice_cues=voice_cues, bgm_track_name="arena_pulse_cc0.wav",
                      bgm_volume=0.10)
@@ -1297,10 +1607,14 @@ def generate_season_recap_video(
     meta.update({
         "video_path": str(video_path),
         "thumbnail_path": str(thumb),
-        "season": season,
+        "season": int(season),
+        "recap_kind": safe_kind,
+        "start_race": data.start_race,
+        "end_race": data.end_race,
         "complete": data.complete,
-        "races": len(replays),
-        "replay_sources": {r.race: r.source for r in replays},
+        "races": len([r for r in replays if r.race >= data.start_race]),
+        "total_races_through": len(replays),
+        "replay_sources": {r.race: r.source for r in replays if r.race >= data.start_race},
         "chapters": [(_fmt_ts(t), n) for t, n in chapters],
         "champion": data.champion,
         "winner": country_name(data.champion) if data.champion else country_name(data.final_table[0]["code"]),

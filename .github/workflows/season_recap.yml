@@ -2,22 +2,25 @@ name: Call It Arena — Season Recap (long-form 16:9)
 
 on:
   schedule:
-    # Daily check ~3.5h after Slot B. Exits in seconds unless a season has just finished
-    # (Race 28 Grand Final) and its long-form recap has not been posted yet.
+    # Daily check ~3.5h after Slot B. Exits in <2s unless a recap milestone is due:
+    # Part 1 (Race 10), Part 2 (Race 20), Part 3 Finale (Race 28), or Full Season Movie (18h+ after Part 3).
     - cron: "20 17 * * *"
   workflow_dispatch:
     inputs:
       mode:
-        description: "auto = latest finished season not yet posted | preview_so_far = current season so far (never uploads) | season = specific season"
+        description: "auto = next due milestone | preview_so_far = current season so far (dry run) | part1 / part2 / part3 / full = specific episode"
         required: true
-        default: "preview_so_far"
+        default: "auto"
         type: choice
         options:
-          - preview_so_far
           - auto
-          - season
+          - preview_so_far
+          - part1
+          - part2
+          - part3
+          - full
       season:
-        description: "Season number (only for mode=season)"
+        description: "Optional season number override (e.g. 1)"
         required: false
         default: ""
       dry_run:
@@ -56,20 +59,22 @@ jobs:
         with:
           persist-credentials: true
 
-      - name: Is a recap due? (fast exit, no dependencies)
+      - name: Is a recap milestone due? (fast exit, stdlib only)
         id: due
         run: |
-          python3 - <<'PY' >> "$GITHUB_OUTPUT"
+          PYTHONPATH=. python3 - <<'PY' >> "$GITHUB_OUTPUT"
           import json, os
+          from common.recap_schedule import pick_next_due_recap
           mode = os.environ["INPUT_MODE"]
-          if mode != "auto":
+          if mode != "auto" or os.environ.get("INPUT_SEASON"):
               print("due=true")
           else:
               league = json.load(open("state/league.json"))
               posted = json.load(open("state/posted.json")) if os.path.exists("state/posted.json") else {}
-              done = set((posted.get("season_recaps") or {}).keys())
-              finished = {str(c["season"]) for c in league.get("past_champions", [])}
-              print("due=" + ("true" if finished - done else "false"))
+              due = pick_next_due_recap(league, posted)
+              print("due=" + ("true" if due else "false"))
+              if due:
+                  print(f"recap_key={due['key']}")
           PY
           cat "$GITHUB_OUTPUT"
 
@@ -99,8 +104,12 @@ jobs:
         if: steps.due.outputs.due == 'true'
         run: |
           ARGS="--season-recap --recap-stills output/recap_stills"
-          if [ "$INPUT_MODE" = "preview_so_far" ]; then ARGS="$ARGS --recap-preview"; fi
-          if [ "$INPUT_MODE" = "season" ] && [ -n "$INPUT_SEASON" ]; then ARGS="$ARGS --recap-season $INPUT_SEASON"; fi
+          if [ "$INPUT_MODE" = "preview_so_far" ]; then
+            ARGS="$ARGS --recap-preview"
+          elif [ "$INPUT_MODE" != "auto" ]; then
+            ARGS="$ARGS --recap-kind $INPUT_MODE"
+          fi
+          if [ -n "$INPUT_SEASON" ]; then ARGS="$ARGS --recap-season $INPUT_SEASON"; fi
           if [ "$INPUT_DRY_RUN" = "true" ]; then ARGS="$ARGS --dry-run"; fi
           python main.py $ARGS
 

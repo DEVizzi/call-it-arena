@@ -70,7 +70,7 @@ def _wav_duration(path: Path) -> float:
         return 1.8
 
 
-def synthesize_phrase(text: str, output_dir: Path) -> Tuple[Path, float]:
+def synthesize_phrase(text: str, output_dir: Path, length_scale: float = 0.92) -> Tuple[Path, float]:
     """
     Synthesizes a short spoken line into a 44.1kHz WAV file.
     Priority:
@@ -79,7 +79,8 @@ def synthesize_phrase(text: str, output_dir: Path) -> Tuple[Path, float]:
     3. Deterministic vocal formant cadence (zero-dependency offline fallback)
     """
     output_dir.mkdir(parents=True, exist_ok=True)
-    digest = hashlib.sha256(text.encode("utf-8")).hexdigest()[:12]
+    key = text if abs(length_scale - 1.0) < 1e-3 else f"{text}|ls={length_scale:.2f}"
+    digest = hashlib.sha256(key.encode("utf-8")).hexdigest()[:12]
     out_wav = output_dir / f"tts_{digest}.wav"
     if out_wav.exists() and out_wav.stat().st_size > 1000:
         return out_wav, _wav_duration(out_wav)
@@ -90,14 +91,18 @@ def synthesize_phrase(text: str, output_dir: Path) -> Tuple[Path, float]:
         onnx_path, json_path = ensure_piper_model(allow_download=True)
         if onnx_path.exists() and json_path.exists():
             try:
-                proc = subprocess.run(
-                    [piper_bin, "--model", str(onnx_path), "--output_file", str(out_wav)],
-                    input=text,
-                    text=True,
-                    capture_output=True,
-                    timeout=30,
-                    check=False,
-                )
+                cmd = [piper_bin, "--model", str(onnx_path), "--length_scale", f"{length_scale:.2f}",
+                       "--output_file", str(out_wav)]
+                proc = subprocess.run(cmd, input=text, text=True, capture_output=True, timeout=30, check=False)
+                if proc.returncode != 0:
+                    proc = subprocess.run(
+                        [piper_bin, "--model", str(onnx_path), "--output_file", str(out_wav)],
+                        input=text,
+                        text=True,
+                        capture_output=True,
+                        timeout=30,
+                        check=False,
+                    )
                 if proc.returncode == 0 and out_wav.exists() and out_wav.stat().st_size > 1000:
                     return out_wav, _wav_duration(out_wav)
             except Exception as e:
