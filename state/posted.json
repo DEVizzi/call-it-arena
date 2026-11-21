@@ -251,7 +251,7 @@
   ],
   "youtube_quota": {
     "date": "2026-11-21",
-    "units_used": 1700,
+    "units_used": 3400,
     "daily_limit": 10000
   },
   "playlist_ids": {
@@ -281,5 +281,18 @@
         }
       }
     }
-  ]
+  ],
+  "season_recaps": {
+    "s1_part1": {
+      "video_id": "G66oXyOJD0A",
+      "url": "https://www.youtube.com/watch?v=G66oXyOJD0A",
+      "title": "Marble League Season 1 (Part 1) — Races 1–13: Full Broadcast Recap 🌍",
+      "season": 1,
+      "recap_kind": "part1",
+      "start_race": 1,
+      "end_race": 13,
+      "posted_utc": "2026-11-21T15:11:13.669379+00:00",
+      "duration_sec": 328.25
+    }
+  }
 }
