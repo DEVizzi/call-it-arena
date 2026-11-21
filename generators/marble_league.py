@@ -21,6 +21,7 @@ Features:
 - Also supports Sunday Slot B `"Weekly Standings + Mega Quiz"` mode (`weekly_recap=True`).
 """
 
+import copy
 import hashlib
 import json
 import logging
@@ -78,7 +79,14 @@ from common.season_theme import (
     render_radial_backdrop,
     render_seasonal_arena_backdrop,
 )
-from common.tts import build_standard_voice_cues
+from common.commentary import (
+    analyze_race,
+    finish_threshold_for,
+    plan_shorts_lines,
+    plan_shorts_post_reveal_line,
+    schedule_lines_into_cues,
+)
+from common.tts import build_standard_voice_cues, synthesize_phrase
 from generators.marble_arenas import ARENA_VARIANTS, MEGA_VARIANT, ArenaConfig, build_arena
 
 logger = logging.getLogger("call_it_arena")
@@ -1068,7 +1076,8 @@ def generate_marble_league_video(
         state["countries"][last_code]["eliminated"] = True
         eliminated_this_race = last_code
 
-    standings = compute_standings(state)
+    # Snapshot (deep copy) so the Grand Final season reset below can never zero the champion card's numbers
+    standings = copy.deepcopy(compute_standings(state))
     winner_meta = COUNTRIES_META[winner_code]
 
     # Build cliffhanger for tomorrow
@@ -1095,6 +1104,17 @@ def generate_marble_league_video(
     }
     if boosted_code:
         history_entry["crowd_boost"] = boosted_code
+    # Extra fields (additive) so the end-of-season long-form recap can replay + narrate every race
+    history_entry["race_codes"] = list(race_codes)
+    history_entry["marble_radius"] = marble_radius
+    history_entry["intensity"] = float(sim.intensity)
+    history_entry["finish_times"] = {c: round(float(t), 3) for c, t in sim.finish_times.items()}
+    history_entry["points_after"] = {s["code"]: int(s.get("points", 0)) for s in standings}
+    if wildcard and wildcard.get("country_code") and not is_own_channel_author(str(wildcard.get("username", ""))):
+        history_entry["wildcard"] = {
+            "code": str(wildcard["country_code"]),
+            "user": sanitize_username(str(wildcard.get("username", ""))),
+        }
     state.setdefault("history", []).append(history_entry)
 
     # Auto-start next season after Race 28 (Monthly Grand Final)
@@ -1105,6 +1125,14 @@ def generate_marble_league_video(
         state.setdefault("past_champions", []).append(
             {"season": season, "champion": champ["code"], "points": champ["points"]}
         )
+        # Archive the final table BEFORE the reset (used by the long-form Season Recap video)
+        state.setdefault("season_archive", {})[str(season)] = {
+            "champion": champ["code"],
+            "final_standings": [
+                {k: s.get(k) for k in ("code", "name", "points", "wins", "podiums", "eliminated")}
+                for s in standings
+            ],
+        }
         next_season = season + 1
         next_race_num = 1
         state["season"] = next_season
@@ -1118,6 +1146,24 @@ def generate_marble_league_video(
 
     if update_state:
         save_league_state(state)
+        try:
+            from generators.race_replay import save_replay_file
+
+            save_replay_file(
+                season=season,
+                race=race_num,
+                seed=seed,
+                variant=variant,
+                intensity=float(sim.intensity),
+                race_codes=race_codes,
+                marble_radius=marble_radius,
+                boosted_code=boosted_code,
+                pacing_name="mega" if is_grand_final else "regular",
+                sim=sim,
+                full_finish_order=full_finish_order,
+            )
+        except Exception as e:  # never let recap bookkeeping break the live Short
+            logger.warning("Could not save race replay file: %s", e)
 
     # Add countdown & reveal fanfare SFX (+ page-flip tick for the standings page)
     add_countdown_and_reveal_sfx(sfx_events, countdown_start_sec, reveal_start_sec)
@@ -1144,6 +1190,44 @@ def generate_marble_league_video(
         outro_time=outro_start_sec,
         output_dir=output_dir / "tts_cache",
     )
+
+    # Live commentary: spoiler-safe hype lines before the countdown + table context after the reveal
+    try:
+        events = analyze_race(
+            sim.frames,
+            race_codes,
+            sim.finish_times,
+            full_finish_order,
+            lambda x, y: _progress(arena, x, y),
+            finish_threshold_for(arena.mode, arena.center, arena.escape_radius, arena.finish_y, marble_radius),
+        )
+        planned = plan_shorts_lines(
+            seed=seed,
+            events=events,
+            race_codes=race_codes,
+            stage=stage_name,
+            points_multiplier=points_multiplier,
+            is_grand_final=is_grand_final,
+            boosted_code=boosted_code,
+            countdown_start=countdown_start_sec,
+            winner_code=winner_code,
+        )
+        post_line = plan_shorts_post_reveal_line(
+            seed=seed,
+            stage=stage_name,
+            eliminated_code=eliminated_this_race,
+            winner_code=winner_code,
+            standings=standings,
+            is_grand_final=is_grand_final,
+            t=standings_page_sec - 0.5,
+            window_end=outro_start_sec - 0.15,
+        )
+        if post_line is not None:
+            planned.append(post_line)
+        tts_dir = output_dir / "tts_cache"
+        voice_cues = schedule_lines_into_cues(voice_cues, planned, lambda txt: synthesize_phrase(txt, tts_dir))
+    except Exception as e:
+        logger.warning("Live commentary skipped: %s", e)
 
     audio_wav_path = output_dir / f"marble_league_{seed}.wav"
     mix_master_audio(

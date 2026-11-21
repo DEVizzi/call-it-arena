@@ -45,6 +45,7 @@ QUOTA_COSTS = {
     "playlistItems.insert": 50,
     "commentThreads.insert": 50,
     "commentThreads.list": 1,
+    "thumbnails.set": 50,
 }
 
 
@@ -244,6 +245,72 @@ def upload_to_youtube_shorts(
         if cid:
             record_quota_usage(posted_state, "commentThreads.insert")
 
+    return video_id, video_url
+
+
+def upload_long_video(
+    video_path: Path,
+    meta: Dict[str, Any],
+    posted_state: Dict[str, Any],
+    playlist_title: str = "",
+    thumbnail_path: Optional[Path] = None,
+    first_comment: str = "",
+) -> Tuple[str, str]:
+    """
+    Uploads a 16:9 long-form video (season recap) as a regular YouTube video with chapters in the
+    description, a custom thumbnail (when the channel is verified for custom thumbnails), playlist
+    placement and a pinned-style first comment. Returns `(video_id, watch_url)`.
+    """
+    if not has_quota_for_upload(posted_state):
+        raise RuntimeError("YouTube daily API quota too low for a long-form upload; deferring.")
+    youtube = authenticate_youtube()
+    body: Dict[str, Any] = {
+        "snippet": {
+            "title": str(meta.get("title", "Call It Arena"))[:100],
+            "description": str(meta.get("description", ""))[:4900],
+            "tags": list(meta.get("tags", []))[:20],
+            "categoryId": str(meta.get("categoryId", "24")),
+            "defaultLanguage": "en",
+            "defaultAudioLanguage": "en",
+        },
+        "status": {
+            "privacyStatus": "public",
+            "selfDeclaredMadeForKids": False,
+            "containsSyntheticMedia": False,
+        },
+    }
+    media = MediaFileUpload(str(video_path), mimetype="video/mp4", chunksize=8 * 1024 * 1024, resumable=True)
+    request = youtube.videos().insert(part="snippet,status", body=body, media_body=media)
+    response = None
+    retries = 0
+    while response is None:
+        try:
+            status, response = request.next_chunk()
+            if status:
+                logger.info("YouTube long-form upload progress: %d%%", int(status.progress() * 100))
+        except Exception as e:
+            retries += 1
+            if retries > 5:
+                raise RuntimeError(f"YouTube long-form upload failed after 5 retries: {redact_secrets(str(e))}")
+    record_quota_usage(posted_state, "videos.insert")
+    video_id = str(response["id"])
+    video_url = f"https://www.youtube.com/watch?v={video_id}"
+    logger.info("Uploaded long-form video: %s", video_url)
+
+    if thumbnail_path and Path(thumbnail_path).exists():
+        try:
+            youtube.thumbnails().set(
+                videoId=video_id, media_body=MediaFileUpload(str(thumbnail_path), mimetype="image/png")
+            ).execute()
+            record_quota_usage(posted_state, "thumbnails.set")
+        except Exception as e:  # requires a verified channel; never fail the upload over it
+            logger.warning("Custom thumbnail not applied: %s", redact_secrets(str(e)))
+    if playlist_title:
+        ensure_playlist_and_add_video(youtube, video_id, playlist_title, posted_state)
+    if first_comment:
+        cid = post_first_comment_youtube(youtube, video_id, first_comment)
+        if cid:
+            record_quota_usage(posted_state, "commentThreads.insert")
     return video_id, video_url
 
 

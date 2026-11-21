@@ -29,11 +29,18 @@ jobs:
           python-version: "3.11"
           cache: "pip"
 
+      - name: Cache Piper TTS voice model (en_US-lessac-medium)
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/piper
+          key: piper-voice-en_US-lessac-medium-v1
+
       - name: Install dependencies
         run: |
           which ffmpeg || (sudo apt-get update && sudo apt-get install -y ffmpeg)
           python -m pip install --upgrade pip
           pip install -r requirements.txt
+          pip install piper-tts || true
 
       - name: Run unit & validation test suite (pytest)
         run: |
@@ -70,6 +77,37 @@ jobs:
               assert res.ok, f"Season {season_num} MP4 validation failed: {res.errors}"
               print(f"Season {season_num} ({variant}) MP4 validated: {res.duration_sec:.2f}s, {res.width}x{res.height}, {res.file_size_mb:.2f} MB")
           PY
+
+      - name: End-to-end long-form Season Recap (16:9, first 4 races, real Piper commentary)
+        run: |
+          PYTHONPATH=. python - <<'PY'
+          from pathlib import Path
+          from common.validate import validate_video_package
+          from generators.marble_league import load_league_state
+          from generators.season_recap import generate_season_recap_video
+
+          st = load_league_state()
+          meta = generate_season_recap_video(st, int(st["season"]), output_dir=Path("output"),
+                                             stills_dir=Path("output/recap_stills"), max_races=4)
+          res = validate_video_package(Path(meta["video_path"]), meta, min_duration=60.0, max_duration=3600.0,
+                                       expected_width=1920, expected_height=1080, max_size_mb=4000.0)
+          assert res.ok, f"Season recap validation failed: {res.errors}"
+          print("Replay sources:", meta["replay_sources"])
+          print("Chapters:", meta["chapters"])
+          print(f"Season recap validated: {res.duration_sec:.1f}s, {res.width}x{res.height}, {res.file_size_mb:.1f} MB")
+          PY
+
+      - name: Upload CI preview videos and recap stills
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ci-preview-media
+          path: |
+            output/*.mp4
+            output/season_recap_*_thumb.png
+            output/recap_stills/*.png
+          retention-days: 5
+          if-no-files-found: ignore
 
       - name: Verify live state files remain completely untouched
         run: |

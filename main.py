@@ -506,6 +506,74 @@ def run_pipeline(
     }
 
 
+def run_season_recap(
+    season: Optional[int] = None,
+    dry_run: bool = False,
+    preview_so_far: bool = False,
+    stills_dir: Optional[Path] = None,
+) -> Dict[str, Any]:
+    """
+    Renders (and when live, uploads) the long-form 16:9 Marble League season recap.
+    - Default: picks the latest COMPLETED season whose recap has not been posted yet; no-op otherwise.
+    - `preview_so_far=True`: renders the current in-progress season (always treated as a dry run).
+    Never writes `state/league.json`; only `state/posted.json` (recap record + quota) on a live upload.
+    """
+    from common.upload_youtube import upload_long_video
+    from generators.marble_league import load_league_state
+    from generators.season_recap import generate_season_recap_video
+
+    ensure_flag_assets()
+    ensure_audio_assets()
+    league = load_league_state()
+    posted_state = load_posted_state()
+    done = posted_state.setdefault("season_recaps", {})
+
+    if preview_so_far:
+        dry_run = True
+        season = int(season or league.get("season", 1))
+    elif season is None:
+        completed = sorted({int(c["season"]) for c in league.get("past_champions", [])})
+        pending = [s for s in completed if str(s) not in done]
+        if not pending:
+            logger.info("No completed season is waiting for a recap. Nothing to do.")
+            return {"skipped": "no completed season pending"}
+        season = pending[-1]
+    elif str(season) in done and not dry_run:
+        return {"skipped": f"season {season} recap already posted", "record": done[str(season)]}
+
+    meta = generate_season_recap_video(league, int(season), output_dir=OUTPUT_DIR, stills_dir=stills_dir)
+    video_path = Path(meta["video_path"])
+    validation = validate_video_package(
+        video_path, meta, min_duration=60.0, max_duration=3600.0, expected_width=1920, expected_height=1080,
+        max_size_mb=4000.0,
+    )
+    if not validation.ok:
+        raise RuntimeError(f"Season recap failed validation: {validation.errors}")
+    logger.info("Season recap validated: %.1fs, %dx%d, %.1f MB", validation.duration_sec, validation.width,
+                validation.height, validation.file_size_mb)
+
+    result: Dict[str, Any] = {"meta": meta, "validation": validation.__dict__, "uploaded": False}
+    if not dry_run and meta.get("complete"):
+        vid, url = upload_long_video(
+            video_path,
+            meta,
+            posted_state,
+            playlist_title=f"Marble League Season {season}",
+            thumbnail_path=Path(meta["thumbnail_path"]),
+            first_comment=f"Who wins Season {int(season) + 1}? Comment your country — the most-requested nation "
+                          f"gets the Crowd Boost! 👇",
+        )
+        done[str(season)] = {
+            "video_id": vid,
+            "url": url,
+            "posted_utc": datetime.datetime.now(datetime.timezone.utc).isoformat(),
+            "duration_sec": validation.duration_sec,
+        }
+        save_posted_state(posted_state)
+        result.update({"uploaded": True, "url": url})
+    return result
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description="Call It Arena — Automated Shorts & Reels Engine")
     parser.add_argument("--slot", choices=["auto", "A", "B"], default="auto", help="Posting slot (A or B)")
@@ -524,7 +592,23 @@ def main() -> int:
         default=None,
         help="Force a specific Marble League arena (testing); default = automatic no-repeat rotation",
     )
+    parser.add_argument("--season-recap", action="store_true",
+                        help="Render/upload the long-form 16:9 Marble League season recap (no Short is made)")
+    parser.add_argument("--recap-season", type=int, default=None, help="Season number for --season-recap")
+    parser.add_argument("--recap-preview", action="store_true",
+                        help="With --season-recap: render the in-progress season so far (dry run, never uploads)")
+    parser.add_argument("--recap-stills", type=str, default=None, help="Directory to save QA stills of the recap")
     args = parser.parse_args()
+
+    if args.season_recap:
+        result = run_season_recap(
+            season=args.recap_season,
+            dry_run=args.dry_run,
+            preview_so_far=args.recap_preview,
+            stills_dir=Path(args.recap_stills) if args.recap_stills else None,
+        )
+        print(json.dumps(result, indent=2, ensure_ascii=False, default=str))
+        return 0
 
     result = run_pipeline(
         slot=args.slot,
