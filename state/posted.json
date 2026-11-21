@@ -209,9 +209,87 @@
       "instagram_media_id": "18112523978250465",
       "instagram_url": "https://www.instagram.com/reel/Df__zgBk4HA/",
       "dry_run": false
+    },
+    {
+      "timestamp_utc": "2026-11-21T20:18:09.331286+00:00",
+      "slot": "B",
+      "format": "marble_league",
+      "seed": "20261121-B-2",
+      "winner": "🇺🇸 USA",
+      "duration_sec": 26.0,
+      "file_size_mb": 5.881,
+      "youtube_title": "Which Country Wins S1·R14? 🇮🇳🇧🇩 Marble Race",
+      "youtube_video_id": "",
+      "youtube_url": "",
+      "instagram_media_id": "18122011774993389",
+      "instagram_url": "https://www.instagram.com/reel/DgBEbdwigL_/",
+      "dry_run": false
     }
   ],
-  "retry_queue": [],
+  "retry_queue": [
+    {
+      "platform": "youtube",
+      "format": "marble_league",
+      "seed": "20261121-B-2",
+      "seo_package": {
+        "pattern_id": "pattern_pick",
+        "youtube": {
+          "title": "Which Country Wins S1·R14? 🇮🇳🇧🇩 Marble Race",
+          "description": "Call it before the reveal! 👇 Every bounce is 100% physics-driven.\nLock your pick before the 3-2-1 countdown hits zero!\n\n💬 Who wins Race 15 tomorrow? 🇮🇳 India or 🇧🇩 Bangladesh? Comment your country for the Wildcard spot! 👇\n\n🎲 Race seed: 20261121-B-2\n🏆 Season Standings & Playlist: https://www.youtube.com/@callitarena/playlists\n\n#shorts #marblerace #countryballs",
+          "tags": [
+            "marble race",
+            "country marble race",
+            "marble league",
+            "countryballs",
+            "physics simulation",
+            "satisfying",
+            "elimination race",
+            "call it arena",
+            "india marble race",
+            "usa vs india",
+            "algodoo style",
+            "pymunk physics"
+          ],
+          "categoryId": "24",
+          "selfDeclaredMadeForKids": false,
+          "containsSyntheticMedia": false,
+          "localizations": {
+            "hi": {
+              "title": "कौन सा देश पहले बाहर निकलेगा? 🇮🇳 मार्बल रेस S1·R14",
+              "description": "रिजल्ट से पहले अपना विजेता कमेंट करें! 👇\nक्या आपका देश इस राउंड में जीत पाएगा?\nRace seed: 20261121-B-2\n#shorts #marblerace #countryballs"
+            },
+            "pt": {
+              "title": "Qual País Escapa Primeiro? 🇧🇷 Corrida de Bolinhas S1·R14",
+              "description": "Comente seu palpite antes da revelação! 👇\nSerá que o Brasil vence esta rodada?\nRace seed: 20261121-B-2\n#shorts #marblerace #countryballs"
+            },
+            "es": {
+              "title": "¿Qué País Escapa Primero? 🇲🇽 Carrera de Canicas S1·R14",
+              "description": "¡Deja tu predicción antes del final! 👇\n¿Podrá tu país clasificar hoy?\nRace seed: 20261121-B-2\n#shorts #marblerace #countryballs"
+            },
+            "id": {
+              "title": "Negara Mana Lolos Duluan? 🇮🇩 Balap Kelereng S1·R14",
+              "description": "Tulis tebakanmu di kolom komentar sebelum reveal! 👇\nBisakah Indonesia menang di babak ini?\nRace seed: 20261121-B-2\n#shorts #marblerace #countryballs"
+            }
+          }
+        },
+        "instagram": {
+          "caption": "Call it before the reveal. 👇 Can you lock in the winner before the 3-2-1 countdown?\n\nWho wins Race 15 tomorrow? 🇮🇳 India or 🇧🇩 Bangladesh? Comment your country for the Wildcard spot! 👇\nSeed: 20261121-B-2 • Follow @callitarena for 2x daily arena battles!\n\n#indiareels #marblerun #callitarena #eliminationgame #marblerace",
+          "share_to_feed": true,
+          "thumb_offset_ms": 18000,
+          "hashtags": [
+            "#indiareels",
+            "#marblerun",
+            "#callitarena",
+            "#eliminationgame",
+            "#marblerace"
+          ]
+        },
+        "first_comment": "Who wins Race 15 tomorrow? 🇮🇳 India or 🇧🇩 Bangladesh? Comment your country for the Wildcard spot! 👇"
+      },
+      "attempts": 1,
+      "last_error": "('invalid_grant: Token has been expired or revoked.', {'error': 'invalid_grant', 'error_description': 'Token has been expired or revoked.'})"
+    }
+  ],
   "recent_title_patterns": [
     "pattern_escape",
     "pattern_99fail",
@@ -227,7 +305,8 @@
     "pattern_escape",
     "pattern_vs",
     "pattern_escape",
-    "pattern_vs"
+    "pattern_vs",
+    "pattern_pick"
   ],
   "used_seeds": [
     "20261114-B",
@@ -244,7 +323,8 @@
     "20261119-B-2",
     "20261120-B",
     "20261120-B-2",
-    "20261121-B"
+    "20261121-B",
+    "20261121-B-2"
   ],
   "used_quiz_items": [
     "flag_TR"

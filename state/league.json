@@ -1,6 +1,6 @@
 {
   "season": 1,
-  "race_number": 13,
+  "race_number": 14,
   "max_races_per_season": 28,
   "stage": "Group Stage",
   "countries": {
@@ -17,9 +17,9 @@
       "code": "US",
       "name": "USA",
       "emoji": "🇺🇸",
-      "points": 26,
-      "wins": 0,
-      "podiums": 3,
+      "points": 36,
+      "wins": 1,
+      "podiums": 4,
       "eliminated": false
     },
     "BR": {
@@ -44,9 +44,9 @@
       "code": "PH",
       "name": "Philippines",
       "emoji": "🇵🇭",
-      "points": 24,
+      "points": 31,
       "wins": 1,
-      "podiums": 3,
+      "podiums": 4,
       "eliminated": false
     },
     "PK": {
@@ -62,16 +62,16 @@
       "code": "BD",
       "name": "Bangladesh",
       "emoji": "🇧🇩",
-      "points": 36,
+      "points": 41,
       "wins": 2,
-      "podiums": 4,
+      "podiums": 5,
       "eliminated": false
     },
     "NG": {
       "code": "NG",
       "name": "Nigeria",
       "emoji": "🇳🇬",
-      "points": 20,
+      "points": 23,
       "wins": 1,
       "podiums": 3,
       "eliminated": false
@@ -107,7 +107,7 @@
       "code": "JP",
       "name": "Japan",
       "emoji": "🇯🇵",
-      "points": 12,
+      "points": 13,
       "wins": 0,
       "podiums": 2,
       "eliminated": false
@@ -429,6 +429,86 @@
         "CA"
       ],
       "points_multiplier": 1
+    },
+    {
+      "season": 1,
+      "race": 14,
+      "seed": "20261121-B-2",
+      "variant": "hexagon_spin",
+      "winner": "US",
+      "podium": [
+        "US",
+        "PH",
+        "BD"
+      ],
+      "eliminated": null,
+      "finish_order": [
+        "US",
+        "PH",
+        "BD",
+        "NG",
+        "JP",
+        "DE",
+        "IN",
+        "MX",
+        "ID",
+        "VN",
+        "GB",
+        "CA",
+        "PK",
+        "EG",
+        "TR",
+        "BR"
+      ],
+      "points_multiplier": 1,
+      "race_codes": [
+        "IN",
+        "US",
+        "BR",
+        "ID",
+        "MX",
+        "PH",
+        "NG",
+        "PK",
+        "EG",
+        "BD",
+        "TR",
+        "CA",
+        "DE",
+        "VN",
+        "GB",
+        "JP"
+      ],
+      "marble_radius": 27,
+      "intensity": 0.85,
+      "finish_times": {
+        "US": 2.9,
+        "PH": 3.767,
+        "BD": 7.333,
+        "NG": 8.133,
+        "JP": 8.9,
+        "DE": 17.8,
+        "IN": 18.033,
+        "MX": 18.433
+      },
+      "points_after": {
+        "BR": 45,
+        "BD": 41,
+        "IN": 40,
+        "US": 36,
+        "ID": 31,
+        "PH": 31,
+        "TR": 26,
+        "DE": 26,
+        "NG": 23,
+        "GB": 13,
+        "JP": 13,
+        "EG": 12,
+        "VN": 10,
+        "MX": 10,
+        "CA": 6,
+        "PK": 1
+      }
     }
   ],
   "past_champions": []
