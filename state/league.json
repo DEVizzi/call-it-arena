@@ -1,6 +1,6 @@
 {
   "season": 1,
-  "race_number": 12,
+  "race_number": 13,
   "max_races_per_season": 28,
   "stage": "Group Stage",
   "countries": {
@@ -17,9 +17,9 @@
       "code": "US",
       "name": "USA",
       "emoji": "🇺🇸",
-      "points": 19,
+      "points": 26,
       "wins": 0,
-      "podiums": 2,
+      "podiums": 3,
       "eliminated": false
     },
     "BR": {
@@ -80,7 +80,7 @@
       "code": "MX",
       "name": "Mexico",
       "emoji": "🇲🇽",
-      "points": 7,
+      "points": 10,
       "wins": 0,
       "podiums": 0,
       "eliminated": false
@@ -89,7 +89,7 @@
       "code": "GB",
       "name": "UK",
       "emoji": "🇬🇧",
-      "points": 12,
+      "points": 13,
       "wins": 0,
       "podiums": 2,
       "eliminated": false
@@ -98,9 +98,9 @@
       "code": "DE",
       "name": "Germany",
       "emoji": "🇩🇪",
-      "points": 16,
-      "wins": 0,
-      "podiums": 1,
+      "points": 26,
+      "wins": 1,
+      "podiums": 2,
       "eliminated": false
     },
     "JP": {
@@ -125,9 +125,9 @@
       "code": "EG",
       "name": "Egypt",
       "emoji": "🇪🇬",
-      "points": 7,
+      "points": 12,
       "wins": 0,
-      "podiums": 1,
+      "podiums": 2,
       "eliminated": false
     },
     "VN": {
@@ -395,6 +395,38 @@
         "GB",
         "NG",
         "BR"
+      ],
+      "points_multiplier": 1
+    },
+    {
+      "season": 1,
+      "race": 13,
+      "seed": "20261121-B",
+      "variant": "gravity_well",
+      "winner": "DE",
+      "podium": [
+        "DE",
+        "US",
+        "EG"
+      ],
+      "eliminated": null,
+      "finish_order": [
+        "DE",
+        "US",
+        "EG",
+        "MX",
+        "GB",
+        "NG",
+        "PK",
+        "BR",
+        "TR",
+        "BD",
+        "VN",
+        "ID",
+        "JP",
+        "IN",
+        "PH",
+        "CA"
       ],
       "points_multiplier": 1
     }

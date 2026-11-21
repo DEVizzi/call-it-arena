@@ -194,6 +194,21 @@
       "instagram_media_id": "17945535825100044",
       "instagram_url": "https://www.instagram.com/reel/Df-ohSmkXQQ/",
       "dry_run": false
+    },
+    {
+      "timestamp_utc": "2026-11-21T10:18:08.337540+00:00",
+      "slot": "B",
+      "format": "marble_league",
+      "seed": "20261121-B",
+      "winner": "🇩🇪 Germany",
+      "duration_sec": 26.0,
+      "file_size_mb": 2.647,
+      "youtube_title": "Who Survives: India 🇮🇳 vs USA 🇺🇸? Marble Race S1·R13",
+      "youtube_video_id": "sXf7owNz5_0",
+      "youtube_url": "https://www.youtube.com/shorts/sXf7owNz5_0",
+      "instagram_media_id": "18112523978250465",
+      "instagram_url": "https://www.instagram.com/reel/Df__zgBk4HA/",
+      "dry_run": false
     }
   ],
   "retry_queue": [],
@@ -211,7 +226,8 @@
     "pattern_vs",
     "pattern_escape",
     "pattern_vs",
-    "pattern_escape"
+    "pattern_escape",
+    "pattern_vs"
   ],
   "used_seeds": [
     "20261114-B",
@@ -227,14 +243,15 @@
     "20261119-B",
     "20261119-B-2",
     "20261120-B",
-    "20261120-B-2"
+    "20261120-B-2",
+    "20261121-B"
   ],
   "used_quiz_items": [
     "flag_TR"
   ],
   "youtube_quota": {
-    "date": "2026-11-20",
-    "units_used": 3400,
+    "date": "2026-11-21",
+    "units_used": 1700,
     "daily_limit": 10000
   },
   "playlist_ids": {
