@@ -536,7 +536,7 @@ class RecapBuilder:
             return img
 
         lines = layout_lines(self.bank, [(0.4, line, 3), (dur - self.bank.dur(line2) - 0.3, line2, 2)], dur)
-        return Segment("cold_open", dur, render, voice=lines, chapter="Cold open", crossfade=False)
+        return Segment("cold_open", dur, render, voice=lines, chapter="Intro", crossfade=False)
 
     # ---------------------------------------------------------------- title
     def title(self) -> Segment:
@@ -610,7 +610,7 @@ class RecapBuilder:
             return img
 
         return Segment("roster", dur, render, voice=layout_lines(self.bank, [(0.6, line, 2)], dur), sfx=sfx,
-                       chapter="The 16 nations")
+                       chapter=None)
 
     # ---------------------------------------------------------------- chapter card
     def chapter_card(self, idx: int, tag: str, title: str, sub: str) -> Segment:
