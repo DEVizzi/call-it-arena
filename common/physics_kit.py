@@ -198,6 +198,14 @@ class ArenaKit:
         rx, ry = rotate_point(p, pose[2])
         return (pose[0] + rx, pose[1] + ry)
 
+    @staticmethod
+    def _blend(c1: Color, c2: Color, t: float) -> Color:
+        return (
+            int(round(c1[0] + (c2[0] - c1[0]) * t)),
+            int(round(c1[1] + (c2[1] - c1[1]) * t)),
+            int(round(c1[2] + (c2[2] - c1[2]) * t)),
+        )
+
     def _draw_spec(self, draw: ImageDraw.ImageDraw, spec: ShapeSpec, pose: Pose) -> None:
         if spec.kind == "seg":
             a = self._xf(spec.data[0], pose)
@@ -212,17 +220,107 @@ class ArenaKit:
             draw.ellipse([c[0] - r, c[1] - r, c[0] + r, c[1] + r], fill=spec.color,
                          outline=spec.outline, width=spec.width if spec.outline else 0)
 
-    def render_static(self, image: Image.Image) -> None:
-        draw = ImageDraw.Draw(image)
-        for spec in self.specs:
-            if spec.body_key == STATIC_KEY:
-                self._draw_spec(draw, spec, (0.0, 0.0, 0.0))
+    def _draw_specs_neon(
+        self,
+        draw: ImageDraw.ImageDraw,
+        items: List[Tuple[ShapeSpec, Pose]],
+        glow_bg: Color,
+        color_map: Optional[Dict[Color, Color]],
+    ) -> None:
+        """
+        3-pass painter's algorithm (Halos -> Bodies -> Specular Cores) so multi-segment rings,
+        polygons, and spinners fuse into seamless glowing broadcast rails without joint seams.
+        """
+        cmap = color_map or {}
+        # Pass 1: Soft outer atmospheric halos
+        for spec, pose in items:
+            col = cmap.get(spec.color, spec.color)
+            halo_col = self._blend(glow_bg, col, 0.34)
+            if spec.kind == "seg":
+                a = self._xf(spec.data[0], pose)
+                b = self._xf(spec.data[1], pose)
+                hw = spec.width + 10
+                draw.line([a, b], fill=halo_col, width=hw)
+                hcap = hw / 2.0
+                for p in (a, b):
+                    draw.ellipse([p[0] - hcap, p[1] - hcap, p[0] + hcap, p[1] + hcap], fill=halo_col)
+            elif spec.kind == "circle":
+                c = self._xf(spec.data[0], pose)
+                hr = spec.data[1] + 5.0
+                draw.ellipse([c[0] - hr, c[1] - hr, c[0] + hr, c[1] + hr], fill=halo_col)
 
-    def render_dynamic(self, draw: ImageDraw.ImageDraw, poses: Dict[str, Pose], offset: Vec = (0.0, 0.0)) -> None:
-        for spec in self.specs:
-            if spec.body_key != STATIC_KEY and spec.body_key in poses:
-                px, py, pa = poses[spec.body_key]
-                self._draw_spec(draw, spec, (px + offset[0], py + offset[1], pa))
+        # Pass 2: Crisp saturated obstacle bodies & rounded endcaps
+        for spec, pose in items:
+            col = cmap.get(spec.color, spec.color)
+            if spec.kind == "seg":
+                a = self._xf(spec.data[0], pose)
+                b = self._xf(spec.data[1], pose)
+                draw.line([a, b], fill=col, width=spec.width)
+                cap = spec.width / 2.0
+                for p in (a, b):
+                    draw.ellipse([p[0] - cap, p[1] - cap, p[0] + cap, p[1] + cap], fill=col)
+            elif spec.kind == "circle":
+                c = self._xf(spec.data[0], pose)
+                r = spec.data[1]
+                rim = self._blend(col, TEXT_WHITE, 0.65) if spec.outline else None
+                draw.ellipse(
+                    [c[0] - r, c[1] - r, c[0] + r, c[1] + r],
+                    fill=col,
+                    outline=rim,
+                    width=spec.width if rim else 0,
+                )
+
+        # Pass 3: Continuous specular inner energy core
+        for spec, pose in items:
+            col = cmap.get(spec.color, spec.color)
+            core_col = self._blend(col, TEXT_WHITE, 0.52)
+            if spec.kind == "seg" and spec.width >= 6:
+                a = self._xf(spec.data[0], pose)
+                b = self._xf(spec.data[1], pose)
+                cw = max(2, spec.width // 4)
+                draw.line([a, b], fill=core_col, width=cw)
+            elif spec.kind == "circle" and spec.data[1] >= 9:
+                c = self._xf(spec.data[0], pose)
+                cr = max(2.5, spec.data[1] * 0.36)
+                draw.ellipse(
+                    [c[0] - cr - 1.5, c[1] - cr - 1.5, c[0] + cr - 1.5, c[1] + cr - 1.5],
+                    fill=core_col,
+                )
+
+    def render_static(
+        self,
+        image: Image.Image,
+        neon_glow: bool = False,
+        glow_bg: Color = (15, 15, 25),
+        color_map: Optional[Dict[Color, Color]] = None,
+    ) -> None:
+        draw = ImageDraw.Draw(image)
+        static_items = [(spec, (0.0, 0.0, 0.0)) for spec in self.specs if spec.body_key == STATIC_KEY]
+        if neon_glow:
+            self._draw_specs_neon(draw, static_items, glow_bg=glow_bg, color_map=color_map)
+        else:
+            for spec, pose in static_items:
+                self._draw_spec(draw, spec, pose)
+
+    def render_dynamic(
+        self,
+        draw: ImageDraw.ImageDraw,
+        poses: Dict[str, Pose],
+        offset: Vec = (0.0, 0.0),
+        neon_glow: bool = False,
+        glow_bg: Color = (15, 15, 25),
+        color_map: Optional[Dict[Color, Color]] = None,
+    ) -> None:
+        dyn_items = [
+            (spec, (poses[spec.body_key][0] + offset[0], poses[spec.body_key][1] + offset[1], poses[spec.body_key][2]))
+            for spec in self.specs
+            if spec.body_key != STATIC_KEY and spec.body_key in poses
+        ]
+        if neon_glow:
+            self._draw_specs_neon(draw, dyn_items, glow_bg=glow_bg, color_map=color_map)
+        else:
+            for spec, pose in dyn_items:
+                self._draw_spec(draw, spec, pose)
 
 
 def oscillating_driver(amplitude: float, omega: float, phase: float = 0.0) -> Callable[[pymunk.Body, float], None]:

@@ -47,6 +47,25 @@ def save_comments_state(state: Dict[str, Any], path: Path = PROCESSED_COMMENTS_F
     path.write_text(json.dumps(state, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
 
 
+OWN_CHANNEL_HANDLES = {
+    "callitarena",
+    "thecallitarena",
+    "callitarenaofficial",
+    "playcallitarena",
+    "silentink",
+}
+CORE_PRIORITY_CODES = {"IN", "US", "BR", "ID"}
+
+
+def is_own_channel_author(author: str) -> bool:
+    """
+    Returns True if `author` belongs to the channel's own YouTube/Instagram account,
+    preventing auto-posted first comments from voting for themselves as Wildcard.
+    """
+    norm = re.sub(r"[^a-z0-9]", "", (author or "").strip().lower())
+    return bool(norm and norm in OWN_CHANNEL_HANDLES)
+
+
 def extract_country_from_text_regex(text: str) -> Optional[str]:
     """
     Deterministic regex + flag emoji matcher that maps comment text to an ISO-2 country code.
@@ -67,13 +86,19 @@ def extract_country_from_text_regex(text: str) -> Optional[str]:
         "hindustan": "IN",
         "america": "US",
         "united states": "US",
+        "brasil": "BR",
+        "indo": "ID",
         "united kingdom": "GB",
         "england": "GB",
         "britain": "GB",
         "pinoy": "PH",
+        "filipino": "PH",
         "naija": "NG",
         "turkiye": "TR",
         "türkiye": "TR",
+        "bangla": "BD",
+        "pak": "PK",
+        "korea": "KR",
     }
     for alias, code in aliases.items():
         if re.search(rf"\b{re.escape(alias)}\b", low):
@@ -86,15 +111,18 @@ def _parse_requests_with_gemini_or_regex(
 ) -> List[Tuple[str, str]]:
     """
     Given a list of `{"id": ..., "author": ..., "text": ...}`, returns a list of
-    `(country_code, sanitized_username)` pairs.
+    `(country_code, sanitized_username)` pairs from real viewers (never own channel).
     """
+    viewer_comments = [
+        c for c in (raw_comments or []) if not is_own_channel_author(c.get("author", ""))
+    ]
     matches: List[Tuple[str, str]] = []
-    for item in raw_comments:
+    for item in viewer_comments:
         code = extract_country_from_text_regex(item.get("text", ""))
         if code:
             matches.append((code, sanitize_username(item.get("author", ""))))
 
-    if matches or not raw_comments:
+    if matches or not viewer_comments:
         return matches
 
     # Try Gemini free tier if regex found no explicit country name/emoji
@@ -106,7 +134,7 @@ def _parse_requests_with_gemini_or_regex(
         valid_codes = list(COUNTRIES_META.keys())
         prompt = (
             f"Extract country requests from these viewer comments. Valid country codes: {valid_codes}.\n"
-            f"Comments: {json.dumps(raw_comments[:20], ensure_ascii=False)}\n"
+            f"Comments: {json.dumps(viewer_comments[:20], ensure_ascii=False)}\n"
             "Return ONLY a JSON array of objects: [{\"code\": \"IN\", \"author\": \"@user\"}]"
         )
         resp = requests.post(
@@ -129,12 +157,56 @@ def _parse_requests_with_gemini_or_regex(
             arr = json.loads(txt)
             for row in arr:
                 c = str(row.get("code", "")).upper()
-                if c in COUNTRIES_META:
-                    matches.append((c, sanitize_username(str(row.get("author", "")))))
+                author = str(row.get("author", ""))
+                if c in COUNTRIES_META and not is_own_channel_author(author):
+                    matches.append((c, sanitize_username(author)))
     except Exception as e:
         logger.debug("Gemini comment parsing skipped: %s", redact_secrets(str(e)))
 
     return matches
+
+
+def select_wildcard_from_matches(matches: List[Tuple[str, str]]) -> Optional[Dict[str, Any]]:
+    """
+    Builds the Wildcard + Crowd Vote payload from `(country_code, @username)` viewer votes:
+    - `country_code` / `country_label` / `username`: prioritizes non-core fan-requested countries
+      so viewer Wildcard requests bring new nations into Group Stage races (falling back to overall
+      top-voted country when only core countries were requested).
+    - `crowd_code` / `crowd_label` / `crowd_votes` / `crowd_user`: tracks the #1 most-commented
+      country overall (used by the Season 2+ Crowd Physics Boost).
+    """
+    valid = [
+        (code, user)
+        for code, user in (matches or [])
+        if code in COUNTRIES_META and not is_own_channel_author(user)
+    ]
+    if not valid:
+        return None
+
+    counts = Counter(code for code, _ in valid)
+    crowd_code, crowd_votes = counts.most_common(1)[0]
+    crowd_user = next(user for code, user in valid if code == crowd_code)
+
+    non_core = Counter(code for code, _ in valid if code not in CORE_PRIORITY_CODES)
+    if non_core:
+        wc_code, wc_votes = non_core.most_common(1)[0]
+    else:
+        wc_code, wc_votes = crowd_code, crowd_votes
+    wc_user = next(user for code, user in valid if code == wc_code)
+
+    wc_meta = COUNTRIES_META[wc_code]
+    crowd_meta = COUNTRIES_META[crowd_code]
+    return {
+        "country_code": wc_code,
+        "country_label": f"{wc_meta['emoji']} {wc_meta['name']}",
+        "username": wc_user,
+        "wildcard_votes": int(wc_votes),
+        "crowd_code": crowd_code,
+        "crowd_label": f"{crowd_meta['emoji']} {crowd_meta['name']}",
+        "crowd_votes": int(crowd_votes),
+        "crowd_user": crowd_user,
+        "total_votes": len(valid),
+    }
 
 
 def fetch_recent_comments_and_pick_wildcard(
@@ -142,13 +214,18 @@ def fetch_recent_comments_and_pick_wildcard(
     youtube_service: Optional[Any] = None,
     ig_access_token: Optional[str] = None,
     allow_network: bool = True,
-) -> Optional[Dict[str, str]]:
+) -> Optional[Dict[str, Any]]:
     """
-    Reads comments on the last 3 videos across YouTube and Instagram, deduplicates against
-    `state/processed_comments.json`, and returns the most-requested Wildcard country:
-    `{"country_code": "IN", "country_label": "🇮🇳 India", "username": "@username"}`.
+    Reads comments on the last 3 videos across YouTube and Instagram, excludes the channel's own
+    auto-posted comments, deduplicates against `state/processed_comments.json`, and returns the
+    viewer-requested Wildcard & Crowd Vote metadata dict.
+    Never mutates `state/processed_comments.json` when `allow_network=False` (dry runs).
     """
     state = load_comments_state()
+    pending = state.get("pending_wildcard")
+    if isinstance(pending, dict) and is_own_channel_author(str(pending.get("username", ""))):
+        state["pending_wildcard"] = None
+
     seen_ids = set(state.get("processed_comment_ids", []))
     raw_new_comments: List[Dict[str, str]] = []
 
@@ -173,15 +250,21 @@ def fetch_recent_comments_and_pick_wildcard(
                         cid = f"yt_{item.get('id', '')}"
                         if cid in seen_ids:
                             continue
-                        top = item.get("snippet", {}).get("topLevelComment", {}).get("snippet", {})
+                        seen_ids.add(cid)
+                        thread_snip = item.get("snippet", {})
+                        owner_channel_id = str(thread_snip.get("channelId", "")).strip()
+                        top = thread_snip.get("topLevelComment", {}).get("snippet", {})
+                        author_channel_id = str(top.get("authorChannelId", {}).get("value", "")).strip()
+                        author_name = str(top.get("authorDisplayName", "@viewer"))
+                        if (owner_channel_id and author_channel_id == owner_channel_id) or is_own_channel_author(author_name):
+                            continue
                         raw_new_comments.append(
                             {
                                 "id": cid,
-                                "author": top.get("authorDisplayName", "@viewer"),
+                                "author": author_name,
                                 "text": top.get("textDisplay", ""),
                             }
                         )
-                        seen_ids.add(cid)
                 except Exception as e:
                     logger.debug("Could not read YouTube comments for %s: %s", yt_vid, redact_secrets(str(e)))
 
@@ -200,33 +283,29 @@ def fetch_recent_comments_and_pick_wildcard(
                             cid = f"ig_{item.get('id', '')}"
                             if cid in seen_ids:
                                 continue
+                            seen_ids.add(cid)
+                            author_name = str(item.get("username", "@viewer"))
+                            if is_own_channel_author(author_name):
+                                continue
                             raw_new_comments.append(
                                 {
                                     "id": cid,
-                                    "author": item.get("username", "@viewer"),
+                                    "author": author_name,
                                     "text": item.get("text", ""),
                                 }
                             )
-                            seen_ids.add(cid)
                 except Exception as e:
                     logger.debug("Could not read IG comments for %s: %s", ig_mid, redact_secrets(str(e)))
 
     extracted = _parse_requests_with_gemini_or_regex(raw_new_comments)
-    if extracted:
-        counts = Counter(code for code, _ in extracted)
-        top_code, _ = counts.most_common(1)[0]
-        requester = next(user for code, user in extracted if code == top_code)
-        meta = COUNTRIES_META[top_code]
-        wildcard = {
-            "country_code": top_code,
-            "country_label": f"{meta['emoji']} {meta['name']}",
-            "username": requester,
-        }
+    wildcard = select_wildcard_from_matches(extracted)
+    if wildcard:
         state["pending_wildcard"] = wildcard
         state.setdefault("wildcard_history", []).append(wildcard)
 
-    state["processed_comment_ids"] = list(seen_ids)
-    save_comments_state(state)
+    if allow_network:
+        state["processed_comment_ids"] = list(seen_ids)
+        save_comments_state(state)
     return state.get("pending_wildcard")
 
 

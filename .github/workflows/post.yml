@@ -9,6 +9,15 @@ on:
 
   workflow_dispatch:
     inputs:
+      slot:
+        description: "Posting slot ('auto', 'A' = rotating formats, 'B' = Marble League)"
+        required: false
+        default: "auto"
+        type: choice
+        options:
+          - auto
+          - A
+          - B
       format:
         description: "Video format to generate (or 'auto' for slot default)"
         required: true
@@ -86,10 +95,21 @@ jobs:
 
       - name: Generate, validate, and publish video
         env:
+          INPUT_SLOT: ${{ inputs.slot || 'auto' }}
           INPUT_FORMAT: ${{ inputs.format || 'auto' }}
           INPUT_DRY_RUN: ${{ inputs.dry_run || 'false' }}
+          EVENT_SCHEDULE: ${{ github.event.schedule }}
         run: |
+          RESOLVED_SLOT="$INPUT_SLOT"
+          if [ "$RESOLVED_SLOT" = "auto" ]; then
+            if [ "$EVENT_SCHEDULE" = "42 2 * * *" ]; then
+              RESOLVED_SLOT="A"
+            elif [ "$EVENT_SCHEDULE" = "42 13 * * *" ]; then
+              RESOLVED_SLOT="B"
+            fi
+          fi
           python main.py \
+            --slot "$RESOLVED_SLOT" \
             --format "$INPUT_FORMAT" \
             $( [ "$INPUT_DRY_RUN" = "true" ] && echo "--dry-run" || true )
 
@@ -102,7 +122,7 @@ jobs:
           retention-days: 7
 
       - name: Commit updated state & weekly analytics reports
-        if: always()
+        if: ${{ always() && inputs.dry_run != true && github.ref == 'refs/heads/main' }}
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"

@@ -2,7 +2,11 @@ name: Call It Arena — CI Tests & Validation
 
 on:
   push:
-    branches: [main]
+    branches:
+      - main
+      - "feat/**"
+      - "fix/**"
+      - "test/**"
   pull_request:
     branches: [main]
   workflow_dispatch:
@@ -10,7 +14,7 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
     env:
       SDL_VIDEODRIVER: "dummy"
       SDL_AUDIODRIVER: "dummy"
@@ -31,6 +35,42 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      - name: Run unit & validation test suite
+      - name: Run unit & validation test suite (pytest)
         run: |
           pytest -v
+
+      - name: End-to-end FFmpeg MP4 dry-run validation (Season 1 Classic + Season 2 Neon + Slot A)
+        run: |
+          python main.py --slot B --format marble_league --dry-run
+          python main.py --slot A --format bucket_drop --dry-run
+          PYTHONPATH=. python - <<'PY'
+          from pathlib import Path
+          from common.validate import validate_video_package
+          from generators.marble_league import generate_marble_league_video
+
+          wc = {
+              "country_code": "PH",
+              "country_label": "🇵🇭 Philippines",
+              "username": "@pinoy_racer",
+              "crowd_code": "IN",
+              "crowd_label": "🇮🇳 India",
+              "crowd_votes": 12,
+              "crowd_user": "@aarav_99",
+          }
+          for season_num, variant in [(2, "double_ring"), (3, "windmill_drop")]:
+              meta = generate_marble_league_video(
+                  seed=f"CI-S{season_num}",
+                  output_dir=Path("output"),
+                  wildcard=wc,
+                  update_state=False,
+                  variant_override=variant,
+                  season_override=season_num,
+              )
+              res = validate_video_package(Path(meta["video_path"]), meta)
+              assert res.ok, f"Season {season_num} MP4 validation failed: {res.errors}"
+              print(f"Season {season_num} ({variant}) MP4 validated: {res.duration_sec:.2f}s, {res.width}x{res.height}, {res.file_size_mb:.2f} MB")
+          PY
+
+      - name: Verify live state files remain completely untouched
+        run: |
+          git diff --exit-code state/

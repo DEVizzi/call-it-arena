@@ -222,9 +222,12 @@ def build_title_candidates(
 
     if format_name == "marble_league":
         s_tag = series_tag or "S1·R1"
+        arena_mode = str(context.get("arena_mode", "escape")).strip().lower()
+        lead_verb = "Finish First" if arena_mode == "line" else "Escape First"
+        vs_verb = "Who Wins" if arena_mode == "line" else "Who Survives"
         raw = [
-            ("pattern_escape", f"Can {focus_country} Escape First? {focus_emoji} {kw} {s_tag}"),
-            ("pattern_vs", f"Who Survives: {focus_country} {focus_emoji} vs {rival_country} {rival_emoji}? {kw} {s_tag}"),
+            ("pattern_escape", f"Can {focus_country} {lead_verb}? {focus_emoji} {kw} {s_tag}"),
+            ("pattern_vs", f"{vs_verb}: {focus_country} {focus_emoji} vs {rival_country} {rival_emoji}? {kw} {s_tag}"),
             ("pattern_lastsec", f"Wait For The Final Bounce! 😱 {focus_emoji} {kw} {s_tag}"),
             ("pattern_nobody", f"Nobody Guessed This Winner! 🏆 {kw} {s_tag}"),
             ("pattern_pick", f"Which Country Wins {s_tag}? {focus_emoji}{rival_emoji} {kw}"),
@@ -312,33 +315,44 @@ def select_best_non_repeating_title(
     candidates: List[Tuple[str, str]],
     main_keyword: str,
     recent_patterns: List[str],
+    seed: str = "",
 ) -> Tuple[str, str]:
     """
-    Scores all 5 candidates and selects the highest-scoring title that does NOT
-    repeat the last 2 title patterns (`recent_patterns[-2:]`), guaranteeing the same
-    pattern is never used 3 posts in a row (and ideally not even twice in a row).
+    Scores all candidates and applies a 4-post recency decay plus deterministic seed tie-breaking,
+    preventing both 3-in-a-row streaks and 2-pattern A-B-A-B ping-pong loops.
     """
     forbidden_streak = None
     if len(recent_patterns) >= 2 and recent_patterns[-1] == recent_patterns[-2]:
         forbidden_streak = recent_patterns[-1]
-    last_pattern = recent_patterns[-1] if recent_patterns else None
 
-    scored: List[Tuple[float, str, str]] = []
+    scored: List[Tuple[float, int, str, str]] = []
     for pattern_id, title in candidates:
         if pattern_id == forbidden_streak:
             continue
         base_score = score_title_candidate(title, main_keyword)
-        # Small bonus for rotating pattern every single run
-        if pattern_id != last_pattern:
-            base_score += 5.0
-        scored.append((base_score, pattern_id, title))
+        if recent_patterns and pattern_id == recent_patterns[-1]:
+            base_score -= 25.0
+        elif len(recent_patterns) >= 2 and pattern_id == recent_patterns[-2]:
+            base_score -= 12.0
+        elif len(recent_patterns) >= 3 and pattern_id == recent_patterns[-3]:
+            base_score -= 4.0
+        elif len(recent_patterns) >= 4 and pattern_id == recent_patterns[-4]:
+            base_score += 2.0
+        else:
+            base_score += 10.0
+
+        tie_hash = int(
+            hashlib.sha256(f"{seed}|{pattern_id}".encode("utf-8")).hexdigest()[:8],
+            16,
+        )
+        scored.append((base_score, tie_hash, pattern_id, title))
 
     if not scored:
         pattern_id, title = candidates[0]
         return pattern_id, title[:70]
 
-    scored.sort(key=lambda x: x[0], reverse=True)
-    _, best_pid, best_title = scored[0]
+    scored.sort(key=lambda x: (x[0], x[1]), reverse=True)
+    _, _, best_pid, best_title = scored[0]
     return best_pid, best_title[:70]
 
 
@@ -355,9 +369,14 @@ def build_localizations(
     focus_emoji = str(context.get("focus_emoji", "🇮🇳")).strip()
 
     if format_name == "marble_league":
+        is_line = str(context.get("arena_mode", "escape")).strip().lower() == "line"
+        hi_verb = "सबसे पहले फिनिश करेगा" if is_line else "पहले बाहर निकलेगा"
+        pt_verb = "Chega Primeiro" if is_line else "Escapa Primeiro"
+        es_verb = "Llega Primero" if is_line else "Escapa Primero"
+        id_verb = "Finis Duluan" if is_line else "Lolos Duluan"
         return {
             "hi": {
-                "title": f"कौन सा देश पहले बाहर निकलेगा? {focus_emoji} मार्बल रेस {s_tag}"[:70],
+                "title": f"कौन सा देश {hi_verb}? {focus_emoji} मार्बल रेस {s_tag}"[:70],
                 "description": (
                     f"रिजल्ट से पहले अपना विजेता कमेंट करें! 👇\n"
                     f"क्या आपका देश इस राउंड में जीत पाएगा?\n"
@@ -365,7 +384,7 @@ def build_localizations(
                 ),
             },
             "pt": {
-                "title": f"Qual País Escapa Primeiro? 🇧🇷 Corrida de Bolinhas {s_tag}"[:70],
+                "title": f"Qual País {pt_verb}? 🇧🇷 Corrida de Bolinhas {s_tag}"[:70],
                 "description": (
                     f"Comente seu palpite antes da revelação! 👇\n"
                     f"Será que o Brasil vence esta rodada?\n"
@@ -373,7 +392,7 @@ def build_localizations(
                 ),
             },
             "es": {
-                "title": f"¿Qué País Escapa Primero? 🇲🇽 Carrera de Canicas {s_tag}"[:70],
+                "title": f"¿Qué País {es_verb}? 🇲🇽 Carrera de Canicas {s_tag}"[:70],
                 "description": (
                     f"¡Deja tu predicción antes del final! 👇\n"
                     f"¿Podrá tu país clasificar hoy?\n"
@@ -381,7 +400,7 @@ def build_localizations(
                 ),
             },
             "id": {
-                "title": f"Negara Mana Lolos Duluan? 🇮🇩 Balap Kelereng {s_tag}"[:70],
+                "title": f"Negara Mana {id_verb}? 🇮🇩 Balap Kelereng {s_tag}"[:70],
                 "description": (
                     f"Tulis tebakanmu di kolom komentar sebelum reveal! 👇\n"
                     f"Bisakah Indonesia menang di babak ini?\n"
@@ -483,7 +502,7 @@ def generate_seo_package(
             if 20 <= len(t_str) <= 70 and kw.lower() in t_str.lower():
                 candidates.append((f"gemini_p{idx + 1}", t_str))
 
-    chosen_pattern, yt_title = select_best_non_repeating_title(candidates, kw, recent)
+    chosen_pattern, yt_title = select_best_non_repeating_title(candidates, kw, recent, seed=seed)
 
     # YouTube Description: 2-line hook, question, race seed, season standings link, 3 hashtags (#shorts + 2 niche)
     niche_tag_1, niche_tag_2 = FORMAT_YT_NICHE_HASHTAGS.get(format_name, ("#quiz", "#callitarena"))

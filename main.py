@@ -105,23 +105,42 @@ def load_schedule_config(path: Path = SCHEDULE_FILE) -> Dict[str, Any]:
     return {}
 
 
+def infer_auto_slot(
+    now_utc: Optional[datetime.datetime] = None,
+    used_seeds: Optional[List[str]] = None,
+) -> str:
+    """
+    Infers Slot A vs Slot B when `--slot auto` is used.
+    Slot B cron is scheduled at 13:42 UTC, so any run before 13:00 UTC where today's
+    `YYYYMMDD-A` seed has not been used yet resolves to Slot A (resilient to GitHub Actions
+    cron queue delays past 10:00 UTC).
+    """
+    ts = now_utc or datetime.datetime.now(datetime.timezone.utc)
+    if used_seeds is not None and ts.hour < 13:
+        today_a = f"{ts.strftime('%Y%m%d')}-A"
+        if today_a not in used_seeds:
+            return "A"
+    return "A" if ts.hour < 10 else "B"
+
+
 def resolve_slot_and_format(
     requested_slot: str,
     requested_format: str,
     schedule_cfg: Dict[str, Any],
     seed_str: str,
+    used_seeds: Optional[List[str]] = None,
+    now_utc: Optional[datetime.datetime] = None,
 ) -> Tuple[str, str, bool]:
     """
     Determines `(slot_id, format_name, is_weekly_recap)` based on CLI args, UTC time, and `schedule.yaml`.
     """
-    now_utc = datetime.datetime.now(datetime.timezone.utc)
+    ts = now_utc or datetime.datetime.now(datetime.timezone.utc)
     if requested_slot in ("A", "B"):
         slot_id = requested_slot
     else:
-        # 02:07 UTC -> Slot A, 14:07 UTC -> Slot B
-        slot_id = "A" if now_utc.hour < 10 else "B"
+        slot_id = infer_auto_slot(ts, used_seeds)
 
-    is_sunday = now_utc.weekday() == 6
+    is_sunday = ts.weekday() == 6
     is_weekly_recap = is_sunday and slot_id == "B"
 
     if requested_format and requested_format != "auto" and requested_format in ALL_FORMATS:
@@ -130,7 +149,7 @@ def resolve_slot_and_format(
     if slot_id == "B":
         return slot_id, "marble_league", is_weekly_recap
 
-    # Slot A: weighted selection across Formats 2–6 from schedule.yaml
+    # Slot A: weighted selection across Formats 2–9 from schedule.yaml
     weights_cfg = schedule_cfg.get("format_weights", {})
     rng = random.Random(int(hashlib.sha256(seed_str.encode("utf-8")).hexdigest()[:10], 16))
     fmt_names = list(ROTATING_GUESS_FORMATS)
@@ -319,11 +338,14 @@ def run_pipeline(
         process_retry_queue(posted_state, schedule_cfg)
 
     # 2. Resolve slot, format, and unique seed
-    slot_id_prelim = slot if slot in ("A", "B") else ("A" if datetime.datetime.now(datetime.timezone.utc).hour < 10 else "B")
-    seed = build_unique_seed(slot_id_prelim, posted_state.get("used_seeds", []), custom_seed=custom_seed)
-    slot_id, chosen_format, is_weekly_recap = resolve_slot_and_format(slot, format_name, schedule_cfg, seed)
+    used_seeds = posted_state.get("used_seeds", [])
+    slot_id_prelim = slot if slot in ("A", "B") else infer_auto_slot(used_seeds=used_seeds)
+    seed = build_unique_seed(slot_id_prelim, used_seeds, custom_seed=custom_seed)
+    slot_id, chosen_format, is_weekly_recap = resolve_slot_and_format(
+        slot, format_name, schedule_cfg, seed, used_seeds=used_seeds
+    )
     if custom_seed is None:
-        seed = build_unique_seed(slot_id, posted_state.get("used_seeds", []))
+        seed = build_unique_seed(slot_id, used_seeds)
 
     logger.info("Starting Call It Arena run | Slot=%s | Format=%s | Seed=%s | DryRun=%s", slot_id, chosen_format, seed, dry_run)
 
