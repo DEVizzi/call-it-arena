@@ -1,8 +1,8 @@
 {
   "season": 1,
-  "race_number": 14,
+  "race_number": 15,
   "max_races_per_season": 28,
-  "stage": "Group Stage",
+  "stage": "Knockout Stage",
   "countries": {
     "IN": {
       "code": "IN",
@@ -11,13 +11,13 @@
       "points": 40,
       "wins": 4,
       "podiums": 4,
-      "eliminated": false
+      "eliminated": true
     },
     "US": {
       "code": "US",
       "name": "USA",
       "emoji": "🇺🇸",
-      "points": 36,
+      "points": 39,
       "wins": 1,
       "podiums": 4,
       "eliminated": false
@@ -53,9 +53,9 @@
       "code": "PK",
       "name": "Pakistan",
       "emoji": "🇵🇰",
-      "points": 1,
+      "points": 6,
       "wins": 0,
-      "podiums": 0,
+      "podiums": 1,
       "eliminated": false
     },
     "BD": {
@@ -80,16 +80,16 @@
       "code": "MX",
       "name": "Mexico",
       "emoji": "🇲🇽",
-      "points": 10,
+      "points": 17,
       "wins": 0,
-      "podiums": 0,
+      "podiums": 1,
       "eliminated": false
     },
     "GB": {
       "code": "GB",
       "name": "UK",
       "emoji": "🇬🇧",
-      "points": 13,
+      "points": 14,
       "wins": 0,
       "podiums": 2,
       "eliminated": false
@@ -125,9 +125,9 @@
       "code": "EG",
       "name": "Egypt",
       "emoji": "🇪🇬",
-      "points": 12,
-      "wins": 0,
-      "podiums": 2,
+      "points": 22,
+      "wins": 1,
+      "podiums": 3,
       "eliminated": false
     },
     "VN": {
@@ -508,6 +508,83 @@
         "MX": 10,
         "CA": 6,
         "PK": 1
+      }
+    },
+    {
+      "season": 1,
+      "race": 15,
+      "seed": "20261122-B",
+      "variant": "double_ring",
+      "winner": "EG",
+      "podium": [
+        "EG",
+        "MX",
+        "PK"
+      ],
+      "eliminated": "IN",
+      "finish_order": [
+        "EG",
+        "MX",
+        "PK",
+        "US",
+        "GB",
+        "BR",
+        "VN",
+        "JP",
+        "DE",
+        "CA",
+        "TR",
+        "PH",
+        "NG",
+        "ID",
+        "BD",
+        "IN"
+      ],
+      "points_multiplier": 1,
+      "race_codes": [
+        "IN",
+        "US",
+        "BR",
+        "ID",
+        "PH",
+        "PK",
+        "BD",
+        "NG",
+        "MX",
+        "GB",
+        "DE",
+        "JP",
+        "TR",
+        "EG",
+        "VN",
+        "CA"
+      ],
+      "marble_radius": 27,
+      "intensity": 0.5,
+      "finish_times": {
+        "EG": 6.567,
+        "MX": 6.667,
+        "PK": 6.833,
+        "US": 10.433,
+        "GB": 18.133
+      },
+      "points_after": {
+        "BR": 45,
+        "BD": 41,
+        "US": 39,
+        "ID": 31,
+        "PH": 31,
+        "TR": 26,
+        "DE": 26,
+        "NG": 23,
+        "EG": 22,
+        "MX": 17,
+        "GB": 14,
+        "JP": 13,
+        "VN": 10,
+        "PK": 6,
+        "CA": 6,
+        "IN": 40
       }
     }
   ],

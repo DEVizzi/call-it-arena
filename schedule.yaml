@@ -19,15 +19,15 @@ slots:
       afternoon + US/Brazil morning'
 max_format_share: 0.7
 format_weights:
-  marble_league: 0.5
-  flag_quiz: 0.1
-  data_guess: 0.1
-  space_guess: 0.1
-  sorting_race: 0.1
-  guess_the_year: 0.1
-  bucket_drop: 0.1
-  tower_quake: 0.1
-  downhill_derby: 0.1
+  marble_league: 0.385
+  flag_quiz: 0.077
+  data_guess: 0.077
+  space_guess: 0.077
+  sorting_race: 0.077
+  guess_the_year: 0.077
+  bucket_drop: 0.077
+  tower_quake: 0.077
+  downhill_derby: 0.077
 playlists:
   marble_league: Marble League Season 1
   flag_quiz: Guess The Flag Quiz
