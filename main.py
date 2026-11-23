@@ -253,6 +253,12 @@ def process_retry_queue(posted_state: Dict[str, Any], schedule_cfg: Dict[str, An
     for item in queue:
         platform = item.get("platform")
         fmt = item.get("format", "marble_league")
+        if fmt == "marble_league":
+            # A league race can't be faithfully regenerated once the table has moved on (a retry would re-simulate
+            # the NEXT race under the old title), so league retries are dropped - re-upload the original MP4 by hand.
+            logger.warning("Dropping queued %s retry for league race seed=%s (not regenerable)", platform,
+                           item.get("seed"))
+            continue
         seed = f"{item.get('seed', 'retry')}-R"
         logger.info("Retrying queued %s upload for format=%s (seed=%s)...", platform, fmt, seed)
         try:
