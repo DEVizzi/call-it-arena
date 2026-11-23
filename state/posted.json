@@ -273,6 +273,21 @@
       "instagram_url": "https://www.instagram.com/reel/DgEwSVImSvb/",
       "dry_run": false,
       "youtube_backfilled": true
+    },
+    {
+      "timestamp_utc": "2026-11-23T11:20:44.090250+00:00",
+      "slot": "A",
+      "format": "guess_the_year",
+      "seed": "20261123-A",
+      "winner": "2003 (Option C)",
+      "duration_sec": 22.0,
+      "file_size_mb": 0.948,
+      "youtube_title": "Only History Buffs Call This Year! 🏛️ History Quiz",
+      "youtube_video_id": "SjyLh3Zsphw",
+      "youtube_url": "https://www.youtube.com/shorts/SjyLh3Zsphw",
+      "instagram_media_id": "17921817027545071",
+      "instagram_url": "https://www.instagram.com/reel/DgFQiqzjeSX/",
+      "dry_run": false
     }
   ],
   "retry_queue": [],
@@ -295,7 +310,8 @@
     "pattern_pick",
     "pattern_can_in",
     "pattern_lastsec",
-    "pattern_escape"
+    "pattern_escape",
+    "pattern_year_lock"
   ],
   "used_seeds": [
     "20261114-B",
@@ -316,15 +332,17 @@
     "20261121-B-2",
     "20261122-A",
     "20261122-B",
-    "20261123-B"
+    "20261123-B",
+    "20261123-A"
   ],
   "used_quiz_items": [
     "flag_TR",
-    "data_solar_power_gw"
+    "data_solar_power_gw",
+    "year_2003"
   ],
   "youtube_quota": {
     "date": "2026-11-23",
-    "units_used": 5100,
+    "units_used": 6800,
     "daily_limit": 10000
   },
   "playlist_ids": {
