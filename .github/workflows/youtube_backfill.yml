@@ -1,0 +1,48 @@
+name: YouTube Backfill (Instagram-only posts)
+
+on:
+  workflow_dispatch:
+    inputs:
+      seeds:
+        description: "Space-separated post seeds to copy from Instagram to YouTube (oldest first)"
+        required: true
+
+permissions:
+  contents: write
+
+concurrency:
+  group: call-it-arena-post
+  cancel-in-progress: false
+
+jobs:
+  backfill:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      IG_ACCESS_TOKEN: ${{ secrets.IG_ACCESS_TOKEN }}
+      YT_CLIENT_ID: ${{ secrets.YT_CLIENT_ID }}
+      YT_CLIENT_SECRET: ${{ secrets.YT_CLIENT_SECRET }}
+      YT_REFRESH_TOKEN: ${{ secrets.YT_REFRESH_TOKEN }}
+      SEEDS: ${{ inputs.seeds }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+      - run: pip install -r requirements.txt
+      - name: Copy Reels to YouTube
+        run: python scripts/youtube_backfill.py $SEEDS
+      - name: Commit posted.json
+        if: always()
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add state/posted.json
+          if ! git diff --cached --quiet; then
+            git commit -m "chore: youtube backfill [skip ci]"
+            git pull --rebase --autostash -X theirs origin main
+            git push origin main
+          fi
