@@ -219,11 +219,12 @@
       "duration_sec": 26.0,
       "file_size_mb": 5.881,
       "youtube_title": "Which Country Wins S1·R14? 🇮🇳🇧🇩 Marble Race",
-      "youtube_video_id": "",
-      "youtube_url": "",
+      "youtube_video_id": "4hF-IdbaG-M",
+      "youtube_url": "https://www.youtube.com/shorts/4hF-IdbaG-M",
       "instagram_media_id": "18122011774993389",
       "instagram_url": "https://www.instagram.com/reel/DgBEbdwigL_/",
-      "dry_run": false
+      "dry_run": false,
+      "youtube_backfilled": true
     },
     {
       "timestamp_utc": "2026-11-22T10:23:50.269483+00:00",
@@ -234,11 +235,12 @@
       "duration_sec": 22.0,
       "file_size_mb": 1.016,
       "youtube_title": "Can India 🇮🇳 Reach #1 in Solar Energy? Data Race",
-      "youtube_video_id": "",
-      "youtube_url": "",
+      "youtube_video_id": "dm9tMpRv5Cw",
+      "youtube_url": "https://www.youtube.com/shorts/dm9tMpRv5Cw",
       "instagram_media_id": "18097622276176675",
       "instagram_url": "https://www.instagram.com/reel/DgClOYOAdA-/",
-      "dry_run": false
+      "dry_run": false,
+      "youtube_backfilled": true
     },
     {
       "timestamp_utc": "2026-11-22T20:33:23.272018+00:00",
@@ -265,11 +267,12 @@
       "duration_sec": 26.0,
       "file_size_mb": 5.4,
       "youtube_title": "Can India Escape First? 🇮🇳 Marble Race S1·R15",
-      "youtube_video_id": "",
-      "youtube_url": "",
+      "youtube_video_id": "u4WkyT8xsB0",
+      "youtube_url": "https://www.youtube.com/shorts/u4WkyT8xsB0",
       "instagram_media_id": "18123555145959863",
       "instagram_url": "https://www.instagram.com/reel/DgEwSVImSvb/",
-      "dry_run": false
+      "dry_run": false,
+      "youtube_backfilled": true
     }
   ],
   "retry_queue": [],
@@ -320,8 +323,8 @@
     "data_solar_power_gw"
   ],
   "youtube_quota": {
-    "date": "2026-11-21",
-    "units_used": 3400,
+    "date": "2026-11-23",
+    "units_used": 5100,
     "daily_limit": 10000
   },
   "playlist_ids": {
