@@ -253,7 +253,8 @@
       "youtube_url": "",
       "instagram_media_id": "18649807009058644",
       "instagram_url": "https://www.instagram.com/reel/DgDq_aFCBCa/",
-      "dry_run": false
+      "dry_run": false,
+      "superseded": "race 15 replayed under v2 rules (old video to be deleted by owner)"
     }
   ],
   "retry_queue": [
@@ -317,68 +318,6 @@
         "first_comment": "Did you expect 🇺🇸 USA to top the world in Solar Energy? Where did your country rank? 👇"
       },
       "attempts": 2,
-      "last_error": "('invalid_grant: Token has been expired or revoked.', {'error': 'invalid_grant', 'error_description': 'Token has been expired or revoked.'})"
-    },
-    {
-      "platform": "youtube",
-      "format": "marble_league",
-      "seed": "20261122-B",
-      "seo_package": {
-        "pattern_id": "pattern_lastsec",
-        "youtube": {
-          "title": "Wait For The Final Bounce! 😱 🇮🇳 Marble Race S1·R15",
-          "description": "Call it before the reveal! 👇 Every bounce is 100% physics-driven.\nLock your pick before the 3-2-1 countdown hits zero!\n\n💬 Who wins Race 16 tomorrow? 🇮🇳 India or 🇮🇩 Indonesia? Comment your country for the Wildcard spot! 👇\n\n🎲 Race seed: 20261122-B\n🏆 Season Standings & Playlist: https://www.youtube.com/@callitarena/playlists\n\n#shorts #marblerace #countryballs",
-          "tags": [
-            "marble race",
-            "country marble race",
-            "marble league",
-            "countryballs",
-            "physics simulation",
-            "satisfying",
-            "elimination race",
-            "call it arena",
-            "india marble race",
-            "usa vs india",
-            "algodoo style",
-            "pymunk physics"
-          ],
-          "categoryId": "24",
-          "selfDeclaredMadeForKids": false,
-          "containsSyntheticMedia": false,
-          "localizations": {
-            "hi": {
-              "title": "कौन सा देश पहले बाहर निकलेगा? 🇮🇳 मार्बल रेस S1·R15",
-              "description": "रिजल्ट से पहले अपना विजेता कमेंट करें! 👇\nक्या आपका देश इस राउंड में जीत पाएगा?\nRace seed: 20261122-B\n#shorts #marblerace #countryballs"
-            },
-            "pt": {
-              "title": "Qual País Escapa Primeiro? 🇧🇷 Corrida de Bolinhas S1·R15",
-              "description": "Comente seu palpite antes da revelação! 👇\nSerá que o Brasil vence esta rodada?\nRace seed: 20261122-B\n#shorts #marblerace #countryballs"
-            },
-            "es": {
-              "title": "¿Qué País Escapa Primero? 🇲🇽 Carrera de Canicas S1·R15",
-              "description": "¡Deja tu predicción antes del final! 👇\n¿Podrá tu país clasificar hoy?\nRace seed: 20261122-B\n#shorts #marblerace #countryballs"
-            },
-            "id": {
-              "title": "Negara Mana Lolos Duluan? 🇮🇩 Balap Kelereng S1·R15",
-              "description": "Tulis tebakanmu di kolom komentar sebelum reveal! 👇\nBisakah Indonesia menang di babak ini?\nRace seed: 20261122-B\n#shorts #marblerace #countryballs"
-            }
-          }
-        },
-        "instagram": {
-          "caption": "Call it before the reveal. 👇 Can you lock in the winner before the 3-2-1 countdown?\n\nWho wins Race 16 tomorrow? 🇮🇳 India or 🇮🇩 Indonesia? Comment your country for the Wildcard spot! 👇\nSeed: 20261122-B • Follow @callitarena for 2x daily arena battles!\n\n#satisfyingvideos #indiareels #marblerun #callitarena #eliminationgame",
-          "share_to_feed": true,
-          "thumb_offset_ms": 18000,
-          "hashtags": [
-            "#satisfyingvideos",
-            "#indiareels",
-            "#marblerun",
-            "#callitarena",
-            "#eliminationgame"
-          ]
-        },
-        "first_comment": "Who wins Race 16 tomorrow? 🇮🇳 India or 🇮🇩 Indonesia? Comment your country for the Wildcard spot! 👇"
-      },
-      "attempts": 1,
       "last_error": "('invalid_grant: Token has been expired or revoked.', {'error': 'invalid_grant', 'error_description': 'Token has been expired or revoked.'})"
     }
   ],

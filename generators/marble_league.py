@@ -86,6 +86,7 @@ from common.commentary import (
     plan_shorts_post_reveal_line,
     schedule_lines_into_cues,
 )
+from common import league_rules
 from common.tts import build_standard_voice_cues, synthesize_phrase
 from generators.marble_arenas import ARENA_VARIANTS, MEGA_VARIANT, ArenaConfig, build_arena
 
@@ -178,12 +179,13 @@ def save_league_state(state: Dict[str, Any], path: Path = LEAGUE_STATE_FILE) -> 
 
 def compute_standings(state: Dict[str, Any]) -> List[Dict[str, Any]]:
     """
-    Returns all 16 countries sorted by `(not eliminated, points DESC, wins DESC, podiums DESC, code ASC)`.
+    Returns all 16 countries sorted by `(not eliminated, eliminated later, points DESC, wins DESC, podiums DESC)`.
     """
     items = list(state.get("countries", {}).values())
     items.sort(
         key=lambda c: (
             0 if c.get("eliminated") else 1,
+            int(c.get("eliminated_in") or 0),      # v2: a later knockout = a better finish
             int(c.get("points", 0)),
             int(c.get("wins", 0)),
             int(c.get("podiums", 0)),
@@ -619,6 +621,7 @@ def _draw_standings_card(
     cliffhanger_text: str,
     eliminated_code: Optional[str],
     theme: Optional[SeasonTheme] = None,
+    elim_note: str = "",
 ) -> Image.Image:
     """
     Reveal page 2: season standings so far (top 8 incl. this race) + India spotlight + cliffhanger.
@@ -666,7 +669,7 @@ def _draw_standings_card(
         row_y += 96
 
         if eliminated_code:
-            draw_centered_text(draw, f"ELIMINATED: {COUNTRIES_META[eliminated_code]['name'].upper()}", cx, row_y,
+            draw_centered_text(draw, f"ELIMINATED: {COUNTRIES_META[eliminated_code]['name'].upper()}{elim_note}", cx, row_y,
                                get_font(30, bold=True), fill=ACCENT_RED)
             row_y += 44
 
@@ -749,7 +752,7 @@ def _draw_standings_card(
     if eliminated_code:
         draw.rounded_rectangle([92, row_y, VIDEO_WIDTH - 92, row_y + 56], radius=15,
                                fill=(62, 16, 24), outline=ACCENT_RED, width=3)
-        el_str = f"KNOCKED OUT: {COUNTRIES_META[eliminated_code]['name'].upper()}"
+        el_str = f"KNOCKED OUT: {COUNTRIES_META[eliminated_code]['name'].upper()}{elim_note}"
         ef = get_font(28, bold=True)
         eb = draw.textbbox((0, 0), el_str, font=ef)
         ew, eh = eb[2] - eb[0], eb[3] - eb[1]
@@ -974,23 +977,17 @@ def generate_marble_league_video(
     # Snapshot pre-race standings BEFORE awarding this race's points (prevents title P1/P2 spoilers)
     pre_race_standings = compute_standings(state)
 
-    # Determine stage across the 4-week (28-race) season
-    if race_num <= 14:
-        stage_name = "Group Stage"
-    elif race_num <= 21:
-        stage_name = "Knockout Stage"
-    elif race_num < max_races:
-        stage_name = "Championship Finals"
-    else:
-        stage_name = "Monthly Grand Final"
-
-    # Determine active countries
+    # Determine active countries + stage (v2 rules: config-driven phases, carry-over points elimination)
+    rules_cfg = league_rules.load_config(state)
     all_countries = state.get("countries", {})
     active_codes = [c for c in LEAGUE_COUNTRY_CODES if not all_countries.get(c, {}).get("eliminated", False)]
-    if len(active_codes) < 6:
+    if len(active_codes) < 2:
         for c in LEAGUE_COUNTRY_CODES:
             all_countries[c]["eliminated"] = False
         active_codes = list(LEAGUE_COUNTRY_CODES)
+    stage_name = league_rules.stage_for_race(race_num, rules_cfg, len(active_codes))
+    pre_teams = league_rules.replay_standings(state.get("history", []), LEAGUE_COUNTRY_CODES, season, rules_cfg)["teams"]
+    danger_pre = league_rules.danger_zone(pre_teams, rules_cfg) if stage_name == league_rules.STAGE_ELIM else None
 
     # Vary ball count (10 to 16 in Group Stage, or all remaining in Knockouts)
     if stage_name == "Group Stage":
@@ -1017,8 +1014,8 @@ def generate_marble_league_video(
     rival_meta = COUNTRIES_META[rival_code]
 
     is_grand_final = stage_name == "Monthly Grand Final"
-    # Points: x2 in the Championship Finals, x3 in the Grand Final mega race (keeps the title race alive)
-    points_multiplier = GRAND_FINAL_POINTS_MULTIPLIER if is_grand_final else (2 if stage_name == "Championship Finals" else 1)
+    # v2: points never reset and are never multiplied - the Semi-Final and Grand Final are pure knockouts
+    points_multiplier = league_rules.points_multiplier_for(stage_name)
 
     # Select a fresh arena (never repeats within the last ARENA_NO_REPEAT_WINDOW races);
     # the Grand Final always uses the multi-stage MEGA GAUNTLET.
@@ -1059,6 +1056,10 @@ def generate_marble_league_video(
     winner_code = full_finish_order[0]
     podium_codes = full_finish_order[:5]
 
+    # v2: score + decide the elimination from the replayed log (lowest CUMULATIVE total, not last in this race)
+    rec = league_rules.record_game(state, race_num, stage_name, full_finish_order, LEAGUE_COUNTRY_CODES,
+                                   seed=seed, cfg=rules_cfg)
+
     # Award points in league state (Top 5: 10, 7, 5, 3, 1)
     for idx, code in enumerate(podium_codes):
         pts = POINTS_TABLE[idx] * points_multiplier
@@ -1069,12 +1070,19 @@ def generate_marble_league_video(
         if idx < 3:
             c_entry["podiums"] = int(c_entry.get("podiums", 0)) + 1
 
-    # In Knockout Stage (Races 15–21), eliminate the last-place active country if > 8 remain
-    eliminated_this_race = None
-    if stage_name == "Knockout Stage" and len(active_codes) > 8:
-        last_code = full_finish_order[-1]
-        state["countries"][last_code]["eliminated"] = True
-        eliminated_this_race = last_code
+    eliminated_all = list(rec["eliminated_all"])
+    for code in eliminated_all:
+        state["countries"][code]["eliminated"] = True
+        state["countries"][code]["eliminated_in"] = race_num
+    eliminated_this_race = eliminated_all[-1] if stage_name == league_rules.STAGE_SEMI and eliminated_all else (
+        eliminated_all[0] if eliminated_all else None)
+    elim_margin = rec.get("elimination_margin")
+    elim_note = ""
+    if stage_name == league_rules.STAGE_ELIM and eliminated_this_race:
+        elim_note = " · LOWEST TOTAL" + (f" (BY {elim_margin})" if elim_margin else " (TIE-BREAK)")
+    if race_num == int(rules_cfg["league_games"]):
+        for c in state["countries"].values():
+            c["league_points"] = int(c.get("points", 0))
 
     # Snapshot (deep copy) so the Grand Final season reset below can never zero the champion card's numbers
     standings = copy.deepcopy(compute_standings(state))
@@ -1084,10 +1092,23 @@ def generate_marble_league_video(
     danger_candidates = [s for s in standings if not s.get("eliminated") and s["code"] != winner_code]
     cliff_country = danger_candidates[min(3, len(danger_candidates) - 1)] if danger_candidates else standings[-1]
     cliffhanger_text = f"Can {cliff_country['name']} survive Race {race_num + 1}? Tomorrow."
-    if race_num + 1 == max_races:
-        cliffhanger_text = "TOMORROW: GRAND FINAL MEGA RACE — TRIPLE POINTS!"
-    elif race_num + 1 == 22:
-        cliffhanger_text = "Championship Finals start tomorrow — DOUBLE POINTS!"
+    post_teams = league_rules.replay_standings(
+        state.get("history", []) + [{"season": season, "race": race_num, "finish_order": full_finish_order,
+                                     "points_by_team": rec["points_by_team"], "eliminated_all": eliminated_all,
+                                     "winner": winner_code, "podium": podium_codes[:3]}],
+        LEAGUE_COUNTRY_CODES, season, rules_cfg)["teams"]
+    next_stage = league_rules.stage_for_race(race_num + 1, rules_cfg,
+                                             sum(1 for t in post_teams.values() if t["status"] == "active"))
+    if race_num + 1 > max_races:
+        pass
+    elif next_stage == league_rules.STAGE_FINAL:
+        cliffhanger_text = "TOMORROW: THE GRAND FINAL — WINNER TAKES THE CROWN!"
+    elif next_stage == league_rules.STAGE_SEMI:
+        cliffhanger_text = f"TOMORROW: SEMI-FINAL — TOP {rules_cfg['semifinal_advance']} REACH THE GRAND FINAL!"
+    elif next_stage == league_rules.STAGE_ELIM:
+        dz = league_rules.danger_zone(post_teams, rules_cfg)
+        if dz:
+            cliffhanger_text = f"DANGER: {COUNTRIES_META[dz['code']]['name'].upper()}, {dz['margin']} PTS FROM SAFETY!"
 
     state["race_number"] = race_num
     state["stage"] = stage_name
@@ -1101,6 +1122,14 @@ def generate_marble_league_video(
         "eliminated": eliminated_this_race,
         "finish_order": full_finish_order,
         "points_multiplier": points_multiplier,
+        "stage": stage_name,
+        "phase": rec["phase"],
+        "rules_version": rec["rules_version"],
+        "points_by_team": rec["points_by_team"],
+        "eliminated_all": eliminated_all,
+        "tiebreak_used": rec["tiebreak_used"],
+        "elimination_margin": elim_margin,
+        "host_override": False,
     }
     if boosted_code:
         history_entry["crowd_boost"] = boosted_code
@@ -1178,8 +1207,12 @@ def generate_marble_league_video(
         else f"Season {season}, Race {race_num}! {arena.hook_spoken}"
     )
     reveal_spoken = f"{winner_meta['name']} wins Race {race_num} and takes {10 * points_multiplier} league points!"
+    if stage_name == league_rules.STAGE_ELIM and not weekly_recap:
+        hook_spoken = f"Season {season}, Race {race_num}! {league_rules.SHORT_RULE}"
+    elif stage_name == league_rules.STAGE_SEMI:
+        hook_spoken = f"Season {season} Semi-Final! Top {rules_cfg['semifinal_advance']} reach the Grand Final!"
     if is_grand_final:
-        hook_spoken = f"Season {season} Grand Final! Triple points, one mega gauntlet. Who becomes champion?"
+        hook_spoken = f"Season {season} Grand Final! One mega gauntlet. The winner is champion!"
         reveal_spoken = (f"{winner_meta['name']} wins the Grand Final! {standings[0]['name']} is the "
                          f"Season {season} champion!")
     voice_cues = build_standard_voice_cues(
@@ -1245,7 +1278,7 @@ def generate_marble_league_video(
     output_mp4_path = output_dir / f"marble_league_{seed}.mp4"
     if use_theme:
         if is_grand_final:
-            series_badge = f"S{season} GRAND FINAL · {theme.edition_name} · 3X"
+            series_badge = f"S{season} GRAND FINAL · {theme.edition_name}"
         elif points_multiplier == 2:
             series_badge = f"S{season} · R{race_num} · {theme.edition_name} · 2X"
         elif weekly_recap:
@@ -1261,7 +1294,7 @@ def generate_marble_league_video(
             else f"SEASON {season} · RACE {race_num} ({stage_name})"
         )
         if is_grand_final:
-            series_badge = f"S{season} GRAND FINAL · 3X POINTS"
+            series_badge = f"S{season} GRAND FINAL · WINNER TAKES ALL"
         elif points_multiplier == 2:
             series_badge = f"S{season} · RACE {race_num} · 2X POINTS"
 
@@ -1434,7 +1467,8 @@ def generate_marble_league_video(
                                             theme=hud_theme)
             else:
                 frame = _draw_standings_card(card_backdrop.copy(), winner_code, standings, season, race_num, stage_name,
-                                             cliffhanger_text, eliminated_this_race, theme=hud_theme)
+                                             cliffhanger_text, eliminated_this_race, theme=hud_theme,
+                                             elim_note=elim_note)
 
             hud_flag_code = boosted_code or (
                 str(wildcard["country_code"]).upper()

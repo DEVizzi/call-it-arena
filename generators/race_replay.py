@@ -74,17 +74,14 @@ class RaceReplay:
 
 # --------------------------------------------------------------------------- stage helpers
 def stage_for_race(race_num: int, max_races: int = 28) -> str:
-    if race_num <= 14:
-        return "Group Stage"
-    if race_num <= 21:
-        return "Knockout Stage"
-    if race_num < max_races:
-        return "Championship Finals"
-    return "Monthly Grand Final"
+    from common import league_rules
+    cfg = dict(league_rules.DEFAULT_CONFIG, total_games=max_races)
+    return league_rules.stage_for_race(race_num, cfg)
 
 
 def points_multiplier_for(stage: str) -> int:
-    return 3 if stage == "Monthly Grand Final" else (2 if stage == "Championship Finals" else 1)
+    from common import league_rules
+    return league_rules.points_multiplier_for(stage)
 
 
 # --------------------------------------------------------------------------- replay files
@@ -198,7 +195,7 @@ def load_replay_file(entry: Dict[str, Any], max_races: int = 28, base_dir: Path 
             payload = json.load(f)
         if payload.get("seed") != entry.get("seed"):
             return None
-        stage = stage_for_race(int(entry["race"]), max_races)
+        stage = entry.get("stage") or stage_for_race(int(entry["race"]), max_races)
         rep = RaceReplay(
             season=int(entry["season"]),
             race=int(entry["race"]),

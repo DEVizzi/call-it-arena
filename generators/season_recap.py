@@ -59,9 +59,9 @@ BRONZE = (214, 138, 72)
 MEDALS = [GOLD, SILVER, BRONZE]
 STAGE_CHAPTERS = [
     ("Group Stage", "CHAPTER 1", "THE GROUP STAGE", "Races 1-14  •  Top five score 10-7-5-3-1"),
-    ("Knockout Stage", "CHAPTER 2", "THE KNOCKOUTS", "Races 15-21  •  Last place is eliminated"),
-    ("Championship Finals", "CHAPTER 3", "CHAMPIONSHIP FINALS", "Races 22-27  •  Double points"),
-    ("Monthly Grand Final", "CHAPTER 4", "THE GRAND FINAL", "Race 28  •  Triple points  •  Mega gauntlet"),
+    ("Knockout Stage", "CHAPTER 2", "THE KNOCKOUTS", "Races 15-26  •  Points never reset  •  Lowest total is out"),
+    ("Semi-Final", "CHAPTER 3", "THE SEMI-FINAL", "Race 27  •  Final four  •  Top two advance"),
+    ("Monthly Grand Final", "CHAPTER 4", "THE GRAND FINAL", "Race 28  •  Winner takes the crown  •  Mega gauntlet"),
 ]
 
 
@@ -255,8 +255,8 @@ def build_season_data(
                 pods[c] = pods.get(c, 0) + 1
             if len(order) > 1:
                 seconds[order[1]] = seconds.get(order[1], 0) + 1
-        if e.get("eliminated"):
-            elim[str(e["eliminated"])] = rep.race
+        for code_out in (e.get("eliminated_all") or ([e["eliminated"]] if e.get("eliminated") else [])):
+            elim[str(code_out)] = rep.race
         wc = e.get("wildcard") or {}
         if wc.get("code"):
             wild[str(wc["code"])] = wild.get(str(wc["code"]), 0) + 1
@@ -565,9 +565,9 @@ class RecapBuilder:
         if kind == "part1":
             line = f"{n_word} opening races. Sixteen nations. Who takes early control?"
         elif kind == "part2":
-            line = f"{n_word} high-stakes races. Knockouts begin. Don't finish last!"
+            line = f"{n_word} high-stakes races. Knockouts begin. Lowest total is out!"
         elif kind == "part3":
-            line = f"The final {n_word.lower()} races. Triple-points Grand Final. One champion!"
+            line = f"The final {n_word.lower()} races. Semi-Final, then the Grand Final. One champion!"
         elif kind == "full" or self.data.complete:
             line = "Twenty-eight races. Sixteen nations. Only one champion!"
         else:
@@ -719,9 +719,9 @@ class RecapBuilder:
         base = self.chrome.bg.copy()
         spoken = spoken_override or {
             0: "The group stage.",
-            1: "The knockouts. Finish last, and you're out!",
-            2: "Championship finals. Double points!",
-            3: "The Grand Final. Triple points!",
+            1: "The knockouts. Points never reset. Lowest total is out!",
+            2: "The Semi-Final. Top two advance!",
+            3: "The Grand Final. Winner takes the crown!",
         }[idx]
         dur = max(2.3, self.bank.dur(spoken) + 0.45)
         voice = layout_lines(self.bank, [(0.12, spoken, 2)], dur)
@@ -1167,7 +1167,7 @@ class RecapBuilder:
 
         if kind == "part1" and not self.data.complete:
             head = "PART 2 DROPS AFTER RACE 20"
-            sub_head = "KNOCKOUTS BEGIN  •  LAST PLACE IS OUT"
+            sub_head = "KNOCKOUTS BEGIN  •  LOWEST TOTAL IS OUT"
             badge_lbl = "KNOCKOUT ARENA"
             teaser_variant = "hexagon_spin"
             spoken = "Part Two drops after race twenty, as the knockout eliminations begin!"
@@ -1178,7 +1178,7 @@ class RecapBuilder:
             sub_head = "2X FINALS  •  3X GRAND FINAL"
             badge_lbl = "GRAND FINAL ARENA"
             teaser_variant = "mega_gauntlet"
-            spoken = "The Season Finale drops after race twenty-eight, with double and triple points on the line!"
+            spoken = "The Season Finale drops after race twenty-eight: the last knockouts, the Semi-Final and the Grand Final!"
             spoken2 = "Catch every race daily in the Shorts, and comment your country!"
             chap_lbl = "Coming up in The Finale"
         elif self.data.complete:
@@ -1312,7 +1312,7 @@ def _stage_chapter_copy(stage_idx: int, stage: str, r_first: int, r_last: int, d
     spoken: Optional[str] = None
     if stage == "Group Stage" and r_first > 1:
         spoken = "Final group stage races."
-    elif stage == "Knockout Stage" and r_first == r_last == 21:
+    elif stage == "Knockout Stage" and r_first == r_last == 26:
         spoken = "The final knockout elimination!"
     return sub, spoken
 
@@ -1405,10 +1405,10 @@ def build_recap_metadata(data: SeasonData, chapters: List[Tuple[float, str]], to
         hook = f"Races {sr}–{er} of Marble League Season {data.season} — 16 nations, real Pymunk physics, full commentary!"
     elif kind == "part2":
         title = f"Marble League Season {data.season} (Part 2) — Races {sr}–{er}: Knockouts Begin! 🔥"
-        hook = f"Races {sr}–{er} of Marble League Season {data.season} — the Knockout Stage eliminates last place every race!"
+        hook = f"Races {sr}–{er} of Marble League Season {data.season} — points never reset, and the lowest total is eliminated every race!"
     elif kind == "part3":
         title = f"Marble League Season {data.season} Finale (Part 3) — Races {sr}–{er} & Grand Final 🏆"
-        hook = f"The Season {data.season} Finale (Races {sr}–{er}) — double-points Finals and the triple-points Grand Final!"
+        hook = f"The Season {data.season} Finale (Races {sr}–{er}) — the last knockouts, the Semi-Final and the Grand Final!"
     elif kind == "full" or data.complete:
         title = f"Marble League Season {data.season} — The Full Season: All {len(data.replays)} Races, 16 Nations 🏆"
         hook = f"Every single race of Marble League Season {data.season} — real physics, real results, one champion."

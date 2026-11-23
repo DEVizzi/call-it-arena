@@ -520,8 +520,13 @@ def generate_seo_package(
             "Which country or pick are you backing for the next battle? Drop it below! 👇",
         )
     )
+    rule_line = ""
+    if format_name == "marble_league" and str(context.get("stage_name", "")) == "Knockout Stage":
+        rule_line = ("📜 Points never reset. After every game from here on, the team with the lowest total points "
+                     "across the whole tournament is eliminated.\n\n")
     yt_description = (
         f"{hook_2lines}\n\n"
+        f"{rule_line}"
         f"💬 {comment_question}\n\n"
         f"🎲 Race seed: {seed}\n"
         f"🏆 Season Standings & Playlist: {playlist_url}\n\n"

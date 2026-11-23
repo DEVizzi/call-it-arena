@@ -150,11 +150,11 @@ def plan_shorts_lines(
     lines: List[PlannedLine] = []
 
     if is_grand_final:
-        ctx = _pick(rng, ["Triple points. One mega gauntlet!", "Everything on the line. Go!",
+        ctx = _pick(rng, ["Winner takes the crown!", "Everything on the line. Go!",
                           "The title is decided right here!"])
     elif stage == "Knockout Stage":
-        ctx = _pick(rng, ["Last place gets knocked out!", "Finish last and you're gone!",
-                          "Knockout race. Don't be last!"])
+        ctx = _pick(rng, ["Points never reset. Lowest total is out!", "Every point counts. Lowest total goes home!",
+                          "Lowest total in the table is out!"])
     elif points_multiplier >= 2:
         ctx = _pick(rng, ["Double points on the line!", "Finals race. Double points!"])
     elif boosted_code and boosted_code in race_codes:
@@ -267,9 +267,9 @@ def recap_race_lines(
     w = country_name(winner)
     nw = NUM_WORDS.get(n_racers, str(n_racers))
     if stage == "Monthly Grand Final":
-        intro = "The Grand Final. Triple points. One mega gauntlet."
+        intro = "The Grand Final. One mega gauntlet. Winner takes the crown."
     elif stage == "Knockout Stage":
-        intro = _pick(rng, ["Race {r}, {a}. Last place is out.", "Race {r}. {a}. Knockout rules."],
+        intro = _pick(rng, ["Race {r}, {a}. Lowest total is out.", "Race {r}. {a}. Knockout rules."],
                       r=race_num, a=label)
     elif points_multiplier >= 2:
         intro = _pick(rng, ["Race {r}, {a}. Double points.", "Race {r}. {a}. Finals pressure."], r=race_num, a=label)
@@ -311,7 +311,8 @@ def recap_race_lines(
         result += f" {second} second, {third} third."
     table = None
     if eliminated:
-        table = _pick(rng, ["{c} finishes last and is knocked out.", "And {c} is eliminated."], c=country_name(eliminated))
+        table = _pick(rng, ["{c} has the lowest total and is knocked out.", "And {c} is eliminated."],
+                      c=country_name(eliminated))
     elif leader_after and winner_rank_after == 1:
         table = f"{w} now leads the league on {leader_after[1]}."
     elif winner_rank_after and winner_rank_after <= 4:

@@ -1,8 +1,8 @@
 {
   "season": 1,
-  "race_number": 15,
+  "race_number": 14,
   "max_races_per_season": 28,
-  "stage": "Knockout Stage",
+  "stage": "Group Stage",
   "countries": {
     "IN": {
       "code": "IN",
@@ -11,16 +11,20 @@
       "points": 40,
       "wins": 4,
       "podiums": 4,
-      "eliminated": true
+      "eliminated": false,
+      "eliminated_in": null,
+      "league_points": 40
     },
     "US": {
       "code": "US",
       "name": "USA",
       "emoji": "🇺🇸",
-      "points": 39,
+      "points": 36,
       "wins": 1,
       "podiums": 4,
-      "eliminated": false
+      "eliminated": false,
+      "eliminated_in": null,
+      "league_points": 36
     },
     "BR": {
       "code": "BR",
@@ -29,7 +33,9 @@
       "points": 45,
       "wins": 2,
       "podiums": 5,
-      "eliminated": false
+      "eliminated": false,
+      "eliminated_in": null,
+      "league_points": 45
     },
     "ID": {
       "code": "ID",
@@ -38,7 +44,9 @@
       "points": 31,
       "wins": 1,
       "podiums": 4,
-      "eliminated": false
+      "eliminated": false,
+      "eliminated_in": null,
+      "league_points": 31
     },
     "PH": {
       "code": "PH",
@@ -47,16 +55,20 @@
       "points": 31,
       "wins": 1,
       "podiums": 4,
-      "eliminated": false
+      "eliminated": false,
+      "eliminated_in": null,
+      "league_points": 31
     },
     "PK": {
       "code": "PK",
       "name": "Pakistan",
       "emoji": "🇵🇰",
-      "points": 6,
+      "points": 1,
       "wins": 0,
-      "podiums": 1,
-      "eliminated": false
+      "podiums": 0,
+      "eliminated": false,
+      "eliminated_in": null,
+      "league_points": 1
     },
     "BD": {
       "code": "BD",
@@ -65,7 +77,9 @@
       "points": 41,
       "wins": 2,
       "podiums": 5,
-      "eliminated": false
+      "eliminated": false,
+      "eliminated_in": null,
+      "league_points": 41
     },
     "NG": {
       "code": "NG",
@@ -74,25 +88,31 @@
       "points": 23,
       "wins": 1,
       "podiums": 3,
-      "eliminated": false
+      "eliminated": false,
+      "eliminated_in": null,
+      "league_points": 23
     },
     "MX": {
       "code": "MX",
       "name": "Mexico",
       "emoji": "🇲🇽",
-      "points": 17,
+      "points": 10,
       "wins": 0,
-      "podiums": 1,
-      "eliminated": false
+      "podiums": 0,
+      "eliminated": false,
+      "eliminated_in": null,
+      "league_points": 10
     },
     "GB": {
       "code": "GB",
       "name": "UK",
       "emoji": "🇬🇧",
-      "points": 14,
+      "points": 13,
       "wins": 0,
       "podiums": 2,
-      "eliminated": false
+      "eliminated": false,
+      "eliminated_in": null,
+      "league_points": 13
     },
     "DE": {
       "code": "DE",
@@ -101,7 +121,9 @@
       "points": 26,
       "wins": 1,
       "podiums": 2,
-      "eliminated": false
+      "eliminated": false,
+      "eliminated_in": null,
+      "league_points": 26
     },
     "JP": {
       "code": "JP",
@@ -110,7 +132,9 @@
       "points": 13,
       "wins": 0,
       "podiums": 2,
-      "eliminated": false
+      "eliminated": false,
+      "eliminated_in": null,
+      "league_points": 13
     },
     "TR": {
       "code": "TR",
@@ -119,16 +143,20 @@
       "points": 26,
       "wins": 1,
       "podiums": 4,
-      "eliminated": false
+      "eliminated": false,
+      "eliminated_in": null,
+      "league_points": 26
     },
     "EG": {
       "code": "EG",
       "name": "Egypt",
       "emoji": "🇪🇬",
-      "points": 22,
-      "wins": 1,
-      "podiums": 3,
-      "eliminated": false
+      "points": 12,
+      "wins": 0,
+      "podiums": 2,
+      "eliminated": false,
+      "eliminated_in": null,
+      "league_points": 12
     },
     "VN": {
       "code": "VN",
@@ -137,7 +165,9 @@
       "points": 10,
       "wins": 0,
       "podiums": 1,
-      "eliminated": false
+      "eliminated": false,
+      "eliminated_in": null,
+      "league_points": 10
     },
     "CA": {
       "code": "CA",
@@ -146,7 +176,9 @@
       "points": 6,
       "wins": 0,
       "podiums": 0,
-      "eliminated": false
+      "eliminated": false,
+      "eliminated_in": null,
+      "league_points": 6
     }
   },
   "history": [
@@ -161,7 +193,9 @@
         "BR",
         "ID"
       ],
-      "eliminated": null
+      "eliminated": null,
+      "rules_version": "v1_single_game_last_place",
+      "stage": "Group Stage"
     },
     {
       "season": 1,
@@ -174,7 +208,9 @@
         "EG",
         "GB"
       ],
-      "eliminated": null
+      "eliminated": null,
+      "rules_version": "v1_single_game_last_place",
+      "stage": "Group Stage"
     },
     {
       "season": 1,
@@ -187,7 +223,9 @@
         "BR",
         "JP"
       ],
-      "eliminated": null
+      "eliminated": null,
+      "rules_version": "v1_single_game_last_place",
+      "stage": "Group Stage"
     },
     {
       "season": 1,
@@ -200,7 +238,9 @@
         "BR",
         "NG"
       ],
-      "eliminated": null
+      "eliminated": null,
+      "rules_version": "v1_single_game_last_place",
+      "stage": "Group Stage"
     },
     {
       "season": 1,
@@ -213,7 +253,9 @@
         "PH",
         "NG"
       ],
-      "eliminated": null
+      "eliminated": null,
+      "rules_version": "v1_single_game_last_place",
+      "stage": "Group Stage"
     },
     {
       "season": 1,
@@ -226,7 +268,9 @@
         "BD",
         "US"
       ],
-      "eliminated": null
+      "eliminated": null,
+      "rules_version": "v1_single_game_last_place",
+      "stage": "Group Stage"
     },
     {
       "season": 1,
@@ -256,7 +300,9 @@
         "JP",
         "TR"
       ],
-      "points_multiplier": 1
+      "points_multiplier": 1,
+      "rules_version": "v1_single_game_last_place",
+      "stage": "Group Stage"
     },
     {
       "season": 1,
@@ -284,7 +330,9 @@
         "PK",
         "CA"
       ],
-      "points_multiplier": 1
+      "points_multiplier": 1,
+      "rules_version": "v1_single_game_last_place",
+      "stage": "Group Stage"
     },
     {
       "season": 1,
@@ -312,7 +360,9 @@
         "EG",
         "PH"
       ],
-      "points_multiplier": 1
+      "points_multiplier": 1,
+      "rules_version": "v1_single_game_last_place",
+      "stage": "Group Stage"
     },
     {
       "season": 1,
@@ -338,7 +388,9 @@
         "CA",
         "IN"
       ],
-      "points_multiplier": 1
+      "points_multiplier": 1,
+      "rules_version": "v1_single_game_last_place",
+      "stage": "Group Stage"
     },
     {
       "season": 1,
@@ -370,7 +422,9 @@
         "PK",
         "EG"
       ],
-      "points_multiplier": 1
+      "points_multiplier": 1,
+      "rules_version": "v1_single_game_last_place",
+      "stage": "Group Stage"
     },
     {
       "season": 1,
@@ -396,7 +450,9 @@
         "NG",
         "BR"
       ],
-      "points_multiplier": 1
+      "points_multiplier": 1,
+      "rules_version": "v1_single_game_last_place",
+      "stage": "Group Stage"
     },
     {
       "season": 1,
@@ -428,7 +484,9 @@
         "PH",
         "CA"
       ],
-      "points_multiplier": 1
+      "points_multiplier": 1,
+      "rules_version": "v1_single_game_last_place",
+      "stage": "Group Stage"
     },
     {
       "season": 1,
@@ -508,85 +566,38 @@
         "MX": 10,
         "CA": 6,
         "PK": 1
-      }
-    },
-    {
-      "season": 1,
-      "race": 15,
-      "seed": "20261122-B",
-      "variant": "double_ring",
-      "winner": "EG",
-      "podium": [
-        "EG",
-        "MX",
-        "PK"
-      ],
-      "eliminated": "IN",
-      "finish_order": [
-        "EG",
-        "MX",
-        "PK",
-        "US",
-        "GB",
-        "BR",
-        "VN",
-        "JP",
-        "DE",
-        "CA",
-        "TR",
-        "PH",
-        "NG",
-        "ID",
-        "BD",
-        "IN"
-      ],
-      "points_multiplier": 1,
-      "race_codes": [
-        "IN",
-        "US",
-        "BR",
-        "ID",
-        "PH",
-        "PK",
-        "BD",
-        "NG",
-        "MX",
-        "GB",
-        "DE",
-        "JP",
-        "TR",
-        "EG",
-        "VN",
-        "CA"
-      ],
-      "marble_radius": 27,
-      "intensity": 0.5,
-      "finish_times": {
-        "EG": 6.567,
-        "MX": 6.667,
-        "PK": 6.833,
-        "US": 10.433,
-        "GB": 18.133
       },
-      "points_after": {
-        "BR": 45,
-        "BD": 41,
-        "US": 39,
-        "ID": 31,
-        "PH": 31,
-        "TR": 26,
-        "DE": 26,
-        "NG": 23,
-        "EG": 22,
-        "MX": 17,
-        "GB": 14,
-        "JP": 13,
-        "VN": 10,
-        "PK": 6,
-        "CA": 6,
-        "IN": 40
-      }
+      "rules_version": "v1_single_game_last_place",
+      "stage": "Group Stage"
     }
   ],
-  "past_champions": []
+  "past_champions": [],
+  "rules_config": {
+    "league_games": 14,
+    "total_games": 28,
+    "teams_entering_semifinals": 4,
+    "semifinal_advance": 2,
+    "eliminations_per_game": 1,
+    "tiebreaker_order": [
+      "last_game_points",
+      "league_points",
+      "game_wins",
+      "host_decision"
+    ],
+    "reset_points_for_knockouts": true,
+    "carry_over_points": true
+  },
+  "rules_changes": [
+    {
+      "utc": "2026-11-23",
+      "change": "v2_cumulative carry-over points elimination",
+      "removed_race": {
+        "season": 1,
+        "race": 15,
+        "seed": "20261122-B",
+        "eliminated_under_v1": "IN",
+        "reason": "v1 knocked out 3rd-placed India on a single race; race 15 is replayed under v2"
+      }
+    }
+  ]
 }
