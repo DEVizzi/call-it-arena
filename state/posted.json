@@ -255,69 +255,84 @@
       "instagram_url": "https://www.instagram.com/reel/DgDq_aFCBCa/",
       "dry_run": false,
       "superseded": "race 15 replayed under v2 rules (old video to be deleted by owner)"
+    },
+    {
+      "timestamp_utc": "2026-11-23T06:38:57.393834+00:00",
+      "slot": "B",
+      "format": "marble_league",
+      "seed": "20261123-B",
+      "winner": "🇩🇪 Germany",
+      "duration_sec": 26.0,
+      "file_size_mb": 5.4,
+      "youtube_title": "Can India Escape First? 🇮🇳 Marble Race S1·R15",
+      "youtube_video_id": "",
+      "youtube_url": "",
+      "instagram_media_id": "18123555145959863",
+      "instagram_url": "https://www.instagram.com/reel/DgEwSVImSvb/",
+      "dry_run": false
     }
   ],
   "retry_queue": [
     {
       "platform": "youtube",
-      "format": "data_guess",
-      "seed": "20261122-A",
+      "format": "marble_league",
+      "seed": "20261123-B",
       "seo_package": {
-        "pattern_id": "pattern_can_in",
+        "pattern_id": "pattern_escape",
         "youtube": {
-          "title": "Can India 🇮🇳 Reach #1 in Solar Energy? Data Race",
-          "description": "Call it before the reveal! 👇 Every bounce is 100% physics-driven.\nLock your pick before the 3-2-1 countdown hits zero!\n\n💬 Did you expect 🇺🇸 USA to top the world in Solar Energy? Where did your country rank? 👇\n\n🎲 Race seed: 20261122-A\n🏆 Season Standings & Playlist: https://www.youtube.com/@callitarena/playlists\n\n#shorts #datavisualization #worldstats",
+          "title": "Can India Escape First? 🇮🇳 Marble Race S1·R15",
+          "description": "Call it before the reveal! 👇 Every bounce is 100% physics-driven.\nLock your pick before the 3-2-1 countdown hits zero!\n\n📜 Points never reset. After every game from here on, the team with the lowest total points across the whole tournament is eliminated.\n\n💬 Who wins Race 16 tomorrow? 🇮🇳 India or 🇺🇸 USA? Comment your country for the Wildcard spot! 👇\n\n🎲 Race seed: 20261123-B\n🏆 Season Standings & Playlist: https://www.youtube.com/@callitarena/playlists\n\n#shorts #marblerace #countryballs",
           "tags": [
-            "bar chart race",
-            "data visualization",
-            "country comparison",
-            "world ranking",
-            "guess the country",
-            "global statistics",
-            "our world in data",
-            "world bank data",
-            "animated stats",
+            "marble race",
+            "country marble race",
+            "marble league",
+            "countryballs",
+            "physics simulation",
+            "satisfying",
+            "elimination race",
             "call it arena",
-            "geography trivia",
-            "satisfying data"
+            "india marble race",
+            "usa vs india",
+            "algodoo style",
+            "pymunk physics"
           ],
           "categoryId": "24",
           "selfDeclaredMadeForKids": false,
           "containsSyntheticMedia": false,
           "localizations": {
             "hi": {
-              "title": "रिवील से पहले सही जवाब बताएं! 🎯 Call It Arena Data Race",
-              "description": "काउंटडाउन खत्म होने से पहले अपना जवाब लॉक करें! 👇\nRace seed: 20261122-A\n#shorts #quiz #callitarena"
+              "title": "कौन सा देश पहले बाहर निकलेगा? 🇮🇳 मार्बल रेस S1·R15",
+              "description": "रिजल्ट से पहले अपना विजेता कमेंट करें! 👇\nक्या आपका देश इस राउंड में जीत पाएगा?\nRace seed: 20261123-B\n#shorts #marblerace #countryballs"
             },
             "pt": {
-              "title": "Acerte Antes da Revelação! 🎯 Desafio Call It Arena",
-              "description": "Comente sua resposta antes do fim da contagem! 👇\nRace seed: 20261122-A\n#shorts #quiz #callitarena"
+              "title": "Qual País Escapa Primeiro? 🇧🇷 Corrida de Bolinhas S1·R15",
+              "description": "Comente seu palpite antes da revelação! 👇\nSerá que o Brasil vence esta rodada?\nRace seed: 20261123-B\n#shorts #marblerace #countryballs"
             },
             "es": {
-              "title": "¡Adivina Antes de la Revelación! 🎯 Call It Arena",
-              "description": "¡Comenta tu respuesta antes de que termine la cuenta regresiva! 👇\nRace seed: 20261122-A\n#shorts #quiz #callitarena"
+              "title": "¿Qué País Escapa Primero? 🇲🇽 Carrera de Canicas S1·R15",
+              "description": "¡Deja tu predicción antes del final! 👇\n¿Podrá tu país clasificar hoy?\nRace seed: 20261123-B\n#shorts #marblerace #countryballs"
             },
             "id": {
-              "title": "Tebak Sebelum Reveal! 🎯 Tantangan Call It Arena",
-              "description": "Kunci jawabanmu di komentar sebelum hitungan mundur habis! 👇\nRace seed: 20261122-A\n#shorts #quiz #callitarena"
+              "title": "Negara Mana Lolos Duluan? 🇮🇩 Balap Kelereng S1·R15",
+              "description": "Tulis tebakanmu di kolom komentar sebelum reveal! 👇\nBisakah Indonesia menang di babak ini?\nRace seed: 20261123-B\n#shorts #marblerace #countryballs"
             }
           }
         },
         "instagram": {
-          "caption": "Call it before the reveal. 👇 Can you lock in the winner before the 3-2-1 countdown?\n\nDid you expect 🇺🇸 USA to top the world in Solar Energy? Where did your country rank? 👇\nSeed: 20261122-A • Follow @callitarena for 2x daily arena battles!\n\n#dataisbeautiful #datavisualization #barchartrace #worldstats #countrycomparison",
+          "caption": "Call it before the reveal. 👇 Can you lock in the winner before the 3-2-1 countdown?\n\nWho wins Race 16 tomorrow? 🇮🇳 India or 🇺🇸 USA? Comment your country for the Wildcard spot! 👇\nSeed: 20261123-B • Follow @callitarena for 2x daily arena battles!\n\n#eliminationgame #marblerace #countryballs #physicssimulation #satisfyingvideos",
           "share_to_feed": true,
-          "thumb_offset_ms": 16500,
+          "thumb_offset_ms": 18000,
           "hashtags": [
-            "#dataisbeautiful",
-            "#datavisualization",
-            "#barchartrace",
-            "#worldstats",
-            "#countrycomparison"
+            "#eliminationgame",
+            "#marblerace",
+            "#countryballs",
+            "#physicssimulation",
+            "#satisfyingvideos"
           ]
         },
-        "first_comment": "Did you expect 🇺🇸 USA to top the world in Solar Energy? Where did your country rank? 👇"
+        "first_comment": "Who wins Race 16 tomorrow? 🇮🇳 India or 🇺🇸 USA? Comment your country for the Wildcard spot! 👇"
       },
-      "attempts": 2,
+      "attempts": 1,
       "last_error": "('invalid_grant: Token has been expired or revoked.', {'error': 'invalid_grant', 'error_description': 'Token has been expired or revoked.'})"
     }
   ],
@@ -339,7 +354,8 @@
     "pattern_vs",
     "pattern_pick",
     "pattern_can_in",
-    "pattern_lastsec"
+    "pattern_lastsec",
+    "pattern_escape"
   ],
   "used_seeds": [
     "20261114-B",
@@ -359,7 +375,8 @@
     "20261121-B",
     "20261121-B-2",
     "20261122-A",
-    "20261122-B"
+    "20261122-B",
+    "20261123-B"
   ],
   "used_quiz_items": [
     "flag_TR",
