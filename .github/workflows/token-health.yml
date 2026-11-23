@@ -1,0 +1,52 @@
+name: YouTube Token Health
+
+# Checks the YouTube refresh token every day ~1 h before each posting slot and opens (or updates) a GitHub Issue the
+# moment Google rejects it, so a dead token is caught before a Short silently misses YouTube.
+on:
+  schedule:
+    - cron: "40 1 * * *"     # ~1 h before Slot A (02:42 UTC)
+    - cron: "40 12 * * *"    # ~1 h before Slot B (13:42 UTC)
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      YT_CLIENT_ID: ${{ secrets.YT_CLIENT_ID }}
+      YT_CLIENT_SECRET: ${{ secrets.YT_CLIENT_SECRET }}
+      YT_REFRESH_TOKEN: ${{ secrets.YT_REFRESH_TOKEN }}
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install requests==2.32.3
+      - name: Refresh + verify YouTube access
+        id: chk
+        run: python scripts/check_youtube_token.py | tee result.txt
+        shell: bash {0}
+      - name: Fail + alert on a dead token
+        if: always()
+        run: |
+          if grep -q "YT OAUTH: OK" result.txt; then
+            # token healthy: close any open alert
+            for n in $(gh issue list --label youtube-token --state open --json number -q '.[].number'); do
+              gh issue close "$n" --comment "Token healthy again: $(cat result.txt)"
+            done
+            exit 0
+          fi
+          gh label create youtube-token --color B60205 --description "YouTube OAuth token alert" 2>/dev/null || true
+          BODY="$(cat result.txt)
+
+          Fix (2 min): run \`python setup_tokens.py --youtube\` locally - it re-authorises the channel and pushes the new YT_REFRESH_TOKEN secret.
+          If this keeps happening every ~7 days: Google Cloud Console -> APIs & Services -> OAuth consent screen -> Publish app (In production)."
+          OPEN=$(gh issue list --label youtube-token --state open --json number -q '.[0].number')
+          if [ -n "$OPEN" ]; then gh issue comment "$OPEN" --body "$BODY"; else
+            gh issue create --title "YouTube token is dead - Shorts are NOT reaching YouTube" --label youtube-token --body "$BODY"; fi
+          exit 1
