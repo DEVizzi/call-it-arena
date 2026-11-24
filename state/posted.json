@@ -288,11 +288,25 @@
       "instagram_media_id": "17921817027545071",
       "instagram_url": "https://www.instagram.com/reel/DgFQiqzjeSX/",
       "dry_run": false
+    },
+    {
+      "timestamp_utc": "2026-11-24T01:15:13.551198+00:00",
+      "slot": "B",
+      "format": "marble_league",
+      "seed": "20261124-B",
+      "winner": "🇨🇦 Canada",
+      "duration_sec": 26.0,
+      "file_size_mb": 6.267,
+      "youtube_title": "Which Country Wins S1·R16? 🇮🇳🇺🇸 Marble Race",
+      "youtube_video_id": "V-5nJSduKYQ",
+      "youtube_url": "https://www.youtube.com/shorts/V-5nJSduKYQ",
+      "instagram_media_id": "18153710983524229",
+      "instagram_url": "https://www.instagram.com/reel/DgGwDQ5DEb8/",
+      "dry_run": false
     }
   ],
   "retry_queue": [],
   "recent_title_patterns": [
-    "pattern_escape",
     "pattern_99fail",
     "pattern_algo_win",
     "pattern_escape",
@@ -311,7 +325,8 @@
     "pattern_can_in",
     "pattern_lastsec",
     "pattern_escape",
-    "pattern_year_lock"
+    "pattern_year_lock",
+    "pattern_pick"
   ],
   "used_seeds": [
     "20261114-B",
@@ -333,7 +348,8 @@
     "20261122-A",
     "20261122-B",
     "20261123-B",
-    "20261123-A"
+    "20261123-A",
+    "20261124-B"
   ],
   "used_quiz_items": [
     "flag_TR",
@@ -341,8 +357,8 @@
     "year_2003"
   ],
   "youtube_quota": {
-    "date": "2026-11-23",
-    "units_used": 6800,
+    "date": "2026-11-24",
+    "units_used": 1700,
     "daily_limit": 10000
   },
   "playlist_ids": {
