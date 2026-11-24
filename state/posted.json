@@ -318,11 +318,25 @@
       "instagram_media_id": "18361572517169567",
       "instagram_url": "https://www.instagram.com/reel/DgIAlTJgatL/",
       "dry_run": false
+    },
+    {
+      "timestamp_utc": "2026-11-24T23:20:21.567976+00:00",
+      "slot": "B",
+      "format": "marble_league",
+      "seed": "20261124-B-2",
+      "winner": "🇧🇷 Brazil",
+      "duration_sec": 26.0,
+      "file_size_mb": 4.731,
+      "youtube_title": "Who Survives: India 🇮🇳 vs Brazil 🇧🇷? Marble Race S1·R17",
+      "youtube_video_id": "kMlJt5K_LEQ",
+      "youtube_url": "https://www.youtube.com/shorts/kMlJt5K_LEQ",
+      "instagram_media_id": "17961270957017049",
+      "instagram_url": "https://www.instagram.com/reel/DgJHqQ7kQSt/",
+      "dry_run": false
     }
   ],
   "retry_queue": [],
   "recent_title_patterns": [
-    "pattern_algo_win",
     "pattern_escape",
     "pattern_vs",
     "pattern_escape",
@@ -341,7 +355,8 @@
     "pattern_escape",
     "pattern_year_lock",
     "pattern_pick",
-    "pattern_bucket_only"
+    "pattern_bucket_only",
+    "pattern_vs"
   ],
   "used_seeds": [
     "20261114-B",
@@ -365,7 +380,8 @@
     "20261123-B",
     "20261123-A",
     "20261124-B",
-    "20261124-A"
+    "20261124-A",
+    "20261124-B-2"
   ],
   "used_quiz_items": [
     "flag_TR",
@@ -374,7 +390,7 @@
   ],
   "youtube_quota": {
     "date": "2026-11-24",
-    "units_used": 3401,
+    "units_used": 5101,
     "daily_limit": 10000
   },
   "playlist_ids": {
