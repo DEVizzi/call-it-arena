@@ -1,0 +1,46 @@
+{
+  "bucket_drop": {
+    "season": 1,
+    "game": 1,
+    "table": {
+      "Bucket 1": {
+        "points": 0,
+        "wins": 0
+      },
+      "Bucket 2": {
+        "points": 0,
+        "wins": 0
+      },
+      "Bucket 3": {
+        "points": 0,
+        "wins": 0
+      },
+      "Bucket 4": {
+        "points": 0,
+        "wins": 0
+      },
+      "Bucket 5": {
+        "points": 1,
+        "wins": 1
+      },
+      "Bucket 6": {
+        "points": 0,
+        "wins": 0
+      },
+      "Bucket 7": {
+        "points": 0,
+        "wins": 0
+      }
+    },
+    "history": [
+      {
+        "season": 1,
+        "game": 1,
+        "seed": "20261124-A",
+        "winner": "Bucket 5",
+        "multiplier": 1
+      }
+    ],
+    "champions": []
+  }
+}
