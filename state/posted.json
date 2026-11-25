@@ -333,11 +333,25 @@
       "instagram_media_id": "17961270957017049",
       "instagram_url": "https://www.instagram.com/reel/DgJHqQ7kQSt/",
       "dry_run": false
+    },
+    {
+      "timestamp_utc": "2026-11-25T11:46:47.588685+00:00",
+      "slot": "A",
+      "format": "downhill_derby",
+      "seed": "20261125-A",
+      "winner": "Car B (Racer)",
+      "duration_sec": 24.0,
+      "file_size_mb": 3.096,
+      "youtube_title": "Guess The Downhill Car Race Winner! 🏎️",
+      "youtube_video_id": "rWIbtScnrjI",
+      "youtube_url": "https://www.youtube.com/shorts/rWIbtScnrjI",
+      "instagram_media_id": "18119924765593920",
+      "instagram_url": "https://www.instagram.com/reel/DgKdH2xtNIw/",
+      "dry_run": false
     }
   ],
   "retry_queue": [],
   "recent_title_patterns": [
-    "pattern_escape",
     "pattern_vs",
     "pattern_escape",
     "pattern_vs",
@@ -356,7 +370,8 @@
     "pattern_year_lock",
     "pattern_pick",
     "pattern_bucket_only",
-    "pattern_vs"
+    "pattern_vs",
+    "pattern_derby_guess"
   ],
   "used_seeds": [
     "20261114-B",
@@ -381,7 +396,8 @@
     "20261123-A",
     "20261124-B",
     "20261124-A",
-    "20261124-B-2"
+    "20261124-B-2",
+    "20261125-A"
   ],
   "used_quiz_items": [
     "flag_TR",
@@ -389,8 +405,8 @@
     "year_2003"
   ],
   "youtube_quota": {
-    "date": "2026-11-24",
-    "units_used": 5101,
+    "date": "2026-11-25",
+    "units_used": 1701,
     "daily_limit": 10000
   },
   "playlist_ids": {
@@ -400,7 +416,8 @@
     "Deep Space Mystery (NASA)": "PLB0ZX28vTe9k",
     "Algorithm Sorting Race": "PLaFUaxJewxis",
     "Guess The Year History Quiz": "PLQaOHRk7lQi8",
-    "Plinko Bucket Drop": "PLeNk6e9YxmVM"
+    "Plinko Bucket Drop": "PLeNk6e9YxmVM",
+    "Downhill Derby (Physics Cars)": "PLT2ITvQFPLyI"
   },
   "weekly_analytics_history": [
     {

@@ -42,5 +42,41 @@
       }
     ],
     "champions": []
+  },
+  "downhill_derby": {
+    "season": 1,
+    "game": 1,
+    "table": {
+      "Monster Truck": {
+        "points": 6,
+        "wins": 0
+      },
+      "Racer": {
+        "points": 10,
+        "wins": 1
+      },
+      "Tank": {
+        "points": 2,
+        "wins": 0
+      },
+      "Buggy": {
+        "points": 4,
+        "wins": 0
+      },
+      "Mini": {
+        "points": 1,
+        "wins": 0
+      }
+    },
+    "history": [
+      {
+        "season": 1,
+        "game": 1,
+        "seed": "20261125-A",
+        "winner": "Racer",
+        "multiplier": 1
+      }
+    ],
+    "champions": []
   }
 }
