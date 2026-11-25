@@ -348,11 +348,25 @@
       "instagram_media_id": "18119924765593920",
       "instagram_url": "https://www.instagram.com/reel/DgKdH2xtNIw/",
       "dry_run": false
+    },
+    {
+      "timestamp_utc": "2026-11-25T22:47:43.965567+00:00",
+      "slot": "B",
+      "format": "marble_league",
+      "seed": "20261125-B",
+      "winner": "🇮🇩 Indonesia",
+      "duration_sec": 26.0,
+      "file_size_mb": 2.689,
+      "youtube_title": "Wait For The Final Bounce! 😱 🇮🇳 Marble Race S1·R18",
+      "youtube_video_id": "aFtuqI4gd2w",
+      "youtube_url": "https://www.youtube.com/shorts/aFtuqI4gd2w",
+      "instagram_media_id": "18159283138525990",
+      "instagram_url": "https://www.instagram.com/reel/DgLoxCzzCN-/",
+      "dry_run": false
     }
   ],
   "retry_queue": [],
   "recent_title_patterns": [
-    "pattern_vs",
     "pattern_escape",
     "pattern_vs",
     "pattern_escape",
@@ -371,7 +385,8 @@
     "pattern_pick",
     "pattern_bucket_only",
     "pattern_vs",
-    "pattern_derby_guess"
+    "pattern_derby_guess",
+    "pattern_lastsec"
   ],
   "used_seeds": [
     "20261114-B",
@@ -397,7 +412,8 @@
     "20261124-B",
     "20261124-A",
     "20261124-B-2",
-    "20261125-A"
+    "20261125-A",
+    "20261125-B"
   ],
   "used_quiz_items": [
     "flag_TR",
@@ -406,7 +422,7 @@
   ],
   "youtube_quota": {
     "date": "2026-11-25",
-    "units_used": 1701,
+    "units_used": 3401,
     "daily_limit": 10000
   },
   "playlist_ids": {
