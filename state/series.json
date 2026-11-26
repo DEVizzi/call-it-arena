@@ -78,5 +78,45 @@
       }
     ],
     "champions": []
+  },
+  "tower_quake": {
+    "season": 1,
+    "game": 1,
+    "table": {
+      "Needle": {
+        "points": 7,
+        "wins": 0
+      },
+      "Temple": {
+        "points": 5,
+        "wins": 0
+      },
+      "Zigzag": {
+        "points": 10,
+        "wins": 1
+      },
+      "Twin Towers": {
+        "points": 2,
+        "wins": 0
+      },
+      "Spire": {
+        "points": 3,
+        "wins": 0
+      },
+      "Fortress": {
+        "points": 1,
+        "wins": 0
+      }
+    },
+    "history": [
+      {
+        "season": 1,
+        "game": 1,
+        "seed": "20261126-A",
+        "winner": "Zigzag",
+        "multiplier": 1
+      }
+    ],
+    "champions": []
   }
 }
