@@ -393,11 +393,25 @@
       "instagram_media_id": "18100988327656682",
       "instagram_url": "https://www.instagram.com/reel/DgOMX94Bk0C/",
       "dry_run": false
+    },
+    {
+      "timestamp_utc": "2026-11-27T11:28:26.395984+00:00",
+      "slot": "A",
+      "format": "guess_the_year",
+      "seed": "20261127-A",
+      "winner": "1989 (Option B)",
+      "duration_sec": 22.0,
+      "file_size_mb": 0.882,
+      "youtube_title": "Only History Buffs Call This Year! 🏛️ History Quiz",
+      "youtube_video_id": "U2ng8sg7TVw",
+      "youtube_url": "https://www.youtube.com/shorts/U2ng8sg7TVw",
+      "instagram_media_id": "17997858794844662",
+      "instagram_url": "https://www.instagram.com/reel/DgPknYqBOL8/",
+      "dry_run": false
     }
   ],
   "retry_queue": [],
   "recent_title_patterns": [
-    "pattern_escape",
     "pattern_vs",
     "pattern_escape",
     "pattern_vs",
@@ -416,7 +430,8 @@
     "pattern_derby_guess",
     "pattern_lastsec",
     "pattern_quake_which",
-    "pattern_nobody"
+    "pattern_nobody",
+    "pattern_year_lock"
   ],
   "used_seeds": [
     "20261114-B",
@@ -445,16 +460,18 @@
     "20261125-A",
     "20261125-B",
     "20261126-A",
-    "20261126-B"
+    "20261126-B",
+    "20261127-A"
   ],
   "used_quiz_items": [
     "flag_TR",
     "data_solar_power_gw",
-    "year_2003"
+    "year_2003",
+    "year_1989"
   ],
   "youtube_quota": {
-    "date": "2026-11-26",
-    "units_used": 3401,
+    "date": "2026-11-27",
+    "units_used": 1700,
     "daily_limit": 10000
   },
   "playlist_ids": {
