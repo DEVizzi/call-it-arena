@@ -408,11 +408,25 @@
       "instagram_media_id": "17997858794844662",
       "instagram_url": "https://www.instagram.com/reel/DgPknYqBOL8/",
       "dry_run": false
+    },
+    {
+      "timestamp_utc": "2026-11-27T22:22:43.031238+00:00",
+      "slot": "B",
+      "format": "marble_league",
+      "seed": "20261127-B",
+      "winner": "🇬🇧 UK",
+      "duration_sec": 26.0,
+      "file_size_mb": 3.431,
+      "youtube_title": "Which Country Wins S1·R20? 🇮🇳🇺🇸 Marble Race",
+      "youtube_video_id": "c5WWuESm5YI",
+      "youtube_url": "https://www.youtube.com/shorts/c5WWuESm5YI",
+      "instagram_media_id": "18100286036136027",
+      "instagram_url": "https://www.instagram.com/reel/DgQvfkfq-N8/",
+      "dry_run": false
     }
   ],
   "retry_queue": [],
   "recent_title_patterns": [
-    "pattern_vs",
     "pattern_escape",
     "pattern_vs",
     "pattern_escape",
@@ -431,7 +445,8 @@
     "pattern_lastsec",
     "pattern_quake_which",
     "pattern_nobody",
-    "pattern_year_lock"
+    "pattern_year_lock",
+    "pattern_pick"
   ],
   "used_seeds": [
     "20261114-B",
@@ -461,7 +476,8 @@
     "20261125-B",
     "20261126-A",
     "20261126-B",
-    "20261127-A"
+    "20261127-A",
+    "20261127-B"
   ],
   "used_quiz_items": [
     "flag_TR",
@@ -471,7 +487,7 @@
   ],
   "youtube_quota": {
     "date": "2026-11-27",
-    "units_used": 1700,
+    "units_used": 3400,
     "daily_limit": 10000
   },
   "playlist_ids": {
