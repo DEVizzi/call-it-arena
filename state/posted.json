@@ -486,8 +486,8 @@
     "year_1989"
   ],
   "youtube_quota": {
-    "date": "2026-11-27",
-    "units_used": 3400,
+    "date": "2026-11-28",
+    "units_used": 1700,
     "daily_limit": 10000
   },
   "playlist_ids": {
@@ -550,6 +550,17 @@
       "end_race": 13,
       "posted_utc": "2026-11-21T15:11:13.669379+00:00",
       "duration_sec": 328.25
+    },
+    "s1_part2": {
+      "video_id": "xQKTKAZyfAM",
+      "url": "https://www.youtube.com/watch?v=xQKTKAZyfAM",
+      "title": "Marble League Season 1 (Part 2) — Races 14–20: Knockouts Begin! 🔥",
+      "season": 1,
+      "recap_kind": "part2",
+      "start_race": 14,
+      "end_race": 20,
+      "posted_utc": "2026-11-28T00:42:03.682790+00:00",
+      "duration_sec": 232.13
     }
   }
 }
